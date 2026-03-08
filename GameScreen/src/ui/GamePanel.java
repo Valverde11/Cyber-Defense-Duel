@@ -10,12 +10,18 @@ public class GamePanel extends JPanel {
     private GameLogic gameLogic;
     private boolean aPressed = false;
     private boolean dPressed = false;
+    private Image backgroundImage;
+    private Image playerImage;
 
     public GamePanel() {
         gameLogic = new GameLogic();
         setPreferredSize(new Dimension(500, 650));
-        setBackground(Color.BLACK);
         setFocusable(true);
+        backgroundImage = new ImageIcon(getClass().getResource("/assets/backgrounds/background-p.jpg")).getImage();
+        playerImage = new ImageIcon(getClass().getResource("/assets/characters/character_1.png")).getImage();
+
+        System.out.println(backgroundImage);
+        System.out.println(playerImage);
 
         addKeyListener(new KeyAdapter() {
             @Override
@@ -66,14 +72,25 @@ public class GamePanel extends JPanel {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
 
-        // Dibujar rectángulo
-        g2d.setColor(Color.WHITE);
-        g2d.fillRect(gameLogic.getRectX(), gameLogic.getRectY(), gameLogic.getRectWidth(), gameLogic.getRectHeight());
+        // Dibujar fondo
+        g2d.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
+
+        // Dibujar jugador
+        g2d.drawImage(playerImage, gameLogic.getRectX(), gameLogic.getRectY(), gameLogic.getRectWidth(), gameLogic.getRectHeight(), this);
 
         // Dibujar balas
-        for (Bullet bullet : gameLogic.getBullets()) {
+        Bullet[] bullets = gameLogic.getBullets();
+
+        for (int i = 0; i < gameLogic.getBulletCount(); i++) {
+            Bullet bullet = bullets[i];
+
             g2d.setColor(bullet.getColor());
-            g2d.fillRect(bullet.getX() - bullet.getWidth() / 2, bullet.getY(), bullet.getWidth(), bullet.getHeight());
+            g2d.fillRect(
+                bullet.getX() - bullet.getWidth() / 2,
+                bullet.getY(),
+                bullet.getWidth(),
+                bullet.getHeight()
+            );
         }
 
         // Dibujar instrucciones

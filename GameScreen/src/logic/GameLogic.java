@@ -1,8 +1,6 @@
 package logic;
 
 import java.awt.Color;
-import java.util.ArrayList;
-import java.util.List;
 
 public class GameLogic {
     private int rectX = 150;
@@ -10,10 +8,11 @@ public class GameLogic {
     private int rectWidth = 50;
     private int rectHeight = 50;
     private int speed = 10;
-    private List<Bullet> bullets;
+    private Bullet[] bullets;
+    private int bulletCount = 0;
 
     public GameLogic() {
-        bullets = new ArrayList<>();
+        bullets = new Bullet[100];
     }
 
     public void moveLeft() {
@@ -25,21 +24,25 @@ public class GameLogic {
     }
 
     public void shootYellow() {
-        int centerX = rectX + rectWidth / 2;
-        int topY = rectY;
-        bullets.add(new Bullet(centerX, topY, Color.YELLOW));
+        shoot(Color.YELLOW);
     }
 
     public void shootRed() {
-        int centerX = rectX + rectWidth / 2;
-        int topY = rectY;
-        bullets.add(new Bullet(centerX, topY, Color.RED));
+        shoot(Color.RED);
     }
 
     public void shootBlue() {
+        shoot(Color.BLUE);
+    }
+
+    private void shoot(Color color) {
         int centerX = rectX + rectWidth / 2;
         int topY = rectY;
-        bullets.add(new Bullet(centerX, topY, Color.BLUE));
+
+        if (bulletCount < bullets.length) {
+            bullets[bulletCount] = new Bullet(centerX, topY, color);
+            bulletCount++;
+        }
     }
 
     public void update(int panelWidth, int panelHeight) {
@@ -51,10 +54,21 @@ public class GameLogic {
         }
 
         // Actualizar balas y eliminar las que salen de pantalla
-        for (Bullet bullet : bullets) {
-            bullet.update();
+        for (int i = 0; i < bulletCount; i++) {
+            bullets[i].update();
         }
-        bullets.removeIf(b -> b.isOutOfBounds(panelHeight));
+        for (int i = 0; i < bulletCount; i++) {
+
+            if (bullets[i].isOutOfBounds(panelHeight)) {
+
+                for (int j = i; j < bulletCount - 1; j++) {
+                    bullets[j] = bullets[j + 1];
+                }
+
+                bulletCount--;
+                i--;
+            }
+        }
     }
 
     public int getRectX() {
@@ -73,7 +87,11 @@ public class GameLogic {
         return rectHeight;
     }
 
-    public List<Bullet> getBullets() {
+    public Bullet[] getBullets() {
         return bullets;
+    }
+
+    public int getBulletCount() {
+        return bulletCount;
     }
 }
