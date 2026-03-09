@@ -4,7 +4,9 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import logic.GameLogic;
+import logic.AttackType;
 import logic.Bullet;
+import logic.Enemy;
 
 public class GamePanel extends JPanel {
     private GameLogic gameLogic;
@@ -12,24 +14,21 @@ public class GamePanel extends JPanel {
     private boolean dPressed = false;
     private Image backgroundImage;
     private Image playerImage;
+    private boolean playerPositioned = false;
 
     public GamePanel() {
         gameLogic = new GameLogic();
-        setPreferredSize(new Dimension(500, 650));
         setFocusable(true);
-        backgroundImage = new ImageIcon(getClass().getResource("/assets/backgrounds/background-p.jpg")).getImage();
+        backgroundImage = new ImageIcon(getClass().getResource("/assets/backgrounds/data_center_dojo.png")).getImage();
         playerImage = new ImageIcon(getClass().getResource("/assets/characters/character_1.png")).getImage();
-
-        System.out.println(backgroundImage);
-        System.out.println(playerImage);
 
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_A) {
+                if (e.getKeyCode() == KeyEvent.VK_LEFT) {
                     aPressed = true;
                 }
-                if (e.getKeyCode() == KeyEvent.VK_D) {
+                if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
                     dPressed = true;
                 }
                 if (e.getKeyCode() == KeyEvent.VK_Q) {
@@ -41,26 +40,34 @@ public class GamePanel extends JPanel {
                 if (e.getKeyCode() == KeyEvent.VK_E) {
                     gameLogic.shootBlue();
                 }
+                if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                    System.exit(0);
+                }
             }
 
             @Override
             public void keyReleased(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_A) {
+                if (e.getKeyCode() == KeyEvent.VK_LEFT) {
                     aPressed = false;
                 }
-                if (e.getKeyCode() == KeyEvent.VK_D) {
+                if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
                     dPressed = false;
                 }
             }
         });
 
-        Timer timer = new Timer(30, e -> {
+        Timer timer = new Timer(16, e -> {
+            if (!playerPositioned && getWidth() > 0) {
+                gameLogic.centerPlayer(getWidth(), getHeight());
+                playerPositioned = true;
+            }
             if (aPressed) {
                 gameLogic.moveLeft();
             }
             if (dPressed) {
                 gameLogic.moveRight();
             }
+            gameLogic.spawnEnemy(getWidth());
             gameLogic.update(getWidth(), getHeight());
             repaint();
         });
@@ -76,7 +83,7 @@ public class GamePanel extends JPanel {
         g2d.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
 
         // Dibujar jugador
-        g2d.drawImage(playerImage, gameLogic.getRectX(), gameLogic.getRectY(), gameLogic.getRectWidth(), gameLogic.getRectHeight(), this);
+        g2d.drawImage(playerImage, gameLogic.getPlayer().getX(), gameLogic.getPlayer().getY(), gameLogic.getPlayer().getWidth(), gameLogic.getPlayer().getHeight(), this);
 
         // Dibujar balas
         Bullet[] bullets = gameLogic.getBullets();
@@ -84,7 +91,15 @@ public class GamePanel extends JPanel {
         for (int i = 0; i < gameLogic.getBulletCount(); i++) {
             Bullet bullet = bullets[i];
 
-            g2d.setColor(bullet.getColor());
+            if (bullet.getType() == AttackType.YELLOW)
+                g2d.setColor(Color.YELLOW);
+
+            if (bullet.getType() == AttackType.RED)
+                g2d.setColor(Color.RED);
+
+            if (bullet.getType() == AttackType.BLUE)
+                g2d.setColor(Color.BLUE);
+
             g2d.fillRect(
                 bullet.getX() - bullet.getWidth() / 2,
                 bullet.getY(),
@@ -92,6 +107,18 @@ public class GamePanel extends JPanel {
                 bullet.getHeight()
             );
         }
+
+        Enemy[] enemies = gameLogic.getEnemies();
+        for (int i = 0; i < gameLogic.getEnemyCount(); i++) {
+            Enemy enemy = enemies[i];
+            if (enemy.getType() == AttackType.YELLOW)
+                g2d.setColor(Color.YELLOW);
+            if (enemy.getType() == AttackType.RED)
+                g2d.setColor(Color.RED);
+            if (enemy.getType() == AttackType.BLUE)
+                g2d.setColor(Color.BLUE);
+            g2d.fillRect(enemy.getX(), enemy.getY(), enemy.getWidth(), enemy.getHeight());
+            }
 
         // Dibujar instrucciones
         g2d.setColor(Color.GREEN);
