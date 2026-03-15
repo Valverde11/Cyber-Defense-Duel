@@ -1,1 +1,16 @@
+logic\Enemy.class
+logic\Player.class
+client\ServerConnection.class
+model\UserRecord.class
+ui\GameView$1.class
+client\AvatarScreen.class
+main\Main.class
+model\GameConfig.class
+logic\AttackType.class
+persistence\SimpleJson.class
+ui\LoginScreen.class
+persistence\DatabaseManager.class
 ui\GameView$2.class
+ui\GameView.class
+logic\Bullet.class
+logic\GameLogic.class

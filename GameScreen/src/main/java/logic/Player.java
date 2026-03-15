@@ -7,8 +7,8 @@ public class Player {
     private int width = 100;
     private int height = 100;
     private int speed = 15;
-
     private int hp;
+    private int score = 0;
 
     public Player(int x, int y, int hp) {
         this.x = x;
@@ -25,14 +25,10 @@ public class Player {
     }
 
     public void update(int panelWidth) {
-
-        if (x < 0) {
+        if (x < 0)
             x = 0;
-        }
-
-        if (x + width > panelWidth) {
+        if (x + width > panelWidth)
             x = panelWidth - width;
-        }
     }
 
     public void setPosition(int x, int y) {
@@ -42,27 +38,42 @@ public class Player {
 
     public void takeDamage(int damage) {
         hp -= damage;
+        if (hp < 0)
+            hp = 0;
+    }
+
+    public void addScore(int points) {
+        score += points;
+    }
+
+    public void clamp(int panelWidth) {
+        if (x < 0)
+            x = 0;
+        if (x + width > panelWidth)
+            x = panelWidth - width;
     }
 
     public int getHp() {
         return hp;
     }
 
-    public int getX() { 
-        return x; 
-    }
-    public int getY() { 
-        return y; 
-    }
-    public int getWidth() { 
-        return width; 
-    }
-    public int getHeight() { 
-        return height; 
+    public int getScore() {
+        return score;
     }
 
-    public void clamp(int panelWidth) {
-        if (x < 0) x = 0;
-        if (x + width > panelWidth) x = panelWidth - width;
+    public int getX() {
+        return x;
+    }
+
+    public int getY() {
+        return y;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
     }
 }

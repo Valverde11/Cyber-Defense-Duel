@@ -1,6 +1,7 @@
 package logic;
 
 public class GameLogic {
+
     private Player player;
     private Bullet[] bullets;
     private int bulletCount = 0;
@@ -9,11 +10,15 @@ public class GameLogic {
     private long lastShotTime = 0;
     private final long shootCooldown = 300;
 
+    private static final int SCORE_PER_KILL = 10;
+
     public GameLogic() {
         bullets = new Bullet[100];
         enemies = new Enemy[50];
         player = new Player(150, 1200, 100);
     }
+
+    // ── Movimiento ────────────────────────────────────────────
 
     public void moveLeft() {
         player.moveLeft();
@@ -22,6 +27,8 @@ public class GameLogic {
     public void moveRight() {
         player.moveRight();
     }
+
+    // ── Disparo ───────────────────────────────────────────────
 
     public void shootYellow() {
         shoot(AttackType.YELLOW);
@@ -36,109 +43,103 @@ public class GameLogic {
     }
 
     private void shoot(AttackType type) {
-        long currentTime = System.currentTimeMillis();
-        if (currentTime - lastShotTime < shootCooldown) {
+        long now = System.currentTimeMillis();
+        if (now - lastShotTime < shootCooldown)
             return;
-        }
-        lastShotTime = currentTime;
+        lastShotTime = now;
         int centerX = player.getX() + player.getWidth() / 2;
         int topY = player.getY();
-
         if (bulletCount < bullets.length) {
-            bullets[bulletCount] = new Bullet(centerX, topY, type);
-            bulletCount++;
+            bullets[bulletCount++] = new Bullet(centerX, topY, type);
         }
     }
+
+    // ── Posición inicial del jugador ──────────────────────────
+
     public void centerPlayer(int panelWidth, int panelHeight) {
-
         int margin = (int) (panelHeight * 0.1);
-
-        int x = (panelWidth / 2) - (player.getWidth() / 2);
+        int x = panelWidth / 2 - player.getWidth() / 2;
         int y = panelHeight - player.getHeight() - margin;
-
         player.setPosition(x, y);
     }
+
+    // ── Update principal ──────────────────────────────────────
 
     public void update(int panelWidth, int panelHeight) {
         player.update(panelWidth);
 
-        // Actualizar balas y eliminar las que salen de pantalla
-        for (int i = 0; i < bulletCount; i++) {
+        // Mover balas
+        for (int i = 0; i < bulletCount; i++)
             bullets[i].update();
-        }
+
+        // Eliminar balas fuera de pantalla
         for (int i = 0; i < bulletCount; i++) {
-
             if (bullets[i].isOutOfBounds(panelHeight)) {
-
-                for (int j = i; j < bulletCount - 1; j++) {
-                    bullets[j] = bullets[j + 1];
-                }
-
-                bulletCount--;
+                removeBullet(i);
                 i--;
             }
         }
-        // actualizar enemigos
-        for (int i = 0; i < enemyCount; i++) {
+
+        // Mover enemigos
+        for (int i = 0; i < enemyCount; i++)
             enemies[i].update();
-        }
-        // eliminar enemigos fuera de pantalla
+
+        // Eliminar enemigos fuera de pantalla
         for (int i = 0; i < enemyCount; i++) {
             if (enemies[i].isOutOfBounds(panelHeight)) {
-                for (int j = i; j < enemyCount - 1; j++) {
-                    enemies[j] = enemies[j + 1];
-                }
-                enemyCount--;
+                removeEnemy(i);
                 i--;
             }
         }
-        // colisiones
+
+        // Colisiones bala-enemigo
         for (int i = 0; i < bulletCount; i++) {
-            Bullet bullet = bullets[i];
+            Bullet b = bullets[i];
             for (int j = 0; j < enemyCount; j++) {
-                Enemy enemy = enemies[j];
-                boolean collision =
-                        bullet.getX() < enemy.getX() + enemy.getWidth() &&
-                        bullet.getX() + bullet.getWidth() > enemy.getX() &&
-                        bullet.getY() < enemy.getY() + enemy.getHeight() &&
-                        bullet.getY() + bullet.getHeight() > enemy.getY();
-                if (collision) {
-                    // verificar tipo correcto
-                    if (bullet.getType() == enemy.getType()) {
-                        removeEnemy(j);
-                        removeBullet(i);
-                        i--;
-                        break;
-                    }
+                Enemy e = enemies[j];
+                boolean hit = b.getX() < e.getX() + e.getWidth() &&
+                        b.getX() + b.getWidth() > e.getX() &&
+                        b.getY() < e.getY() + e.getHeight() &&
+                        b.getY() + b.getHeight() > e.getY();
+
+                if (hit && b.getType() == e.getType()) {
+                    removeEnemy(j);
+                    removeBullet(i);
+                    player.addScore(SCORE_PER_KILL);
+                    i--;
+                    break;
                 }
             }
         }
     }
 
+    // ── Spawn de enemigos ─────────────────────────────────────
+
     public void spawnEnemy(int panelWidth) {
-        int startX = (int) (Math.random() * (panelWidth - 40));
-        int startY = -40;
+        int x = (int) (Math.random() * (panelWidth - 40));
         int speed = 2 + (int) (Math.random() * 3);
         AttackType type = AttackType.values()[(int) (Math.random() * AttackType.values().length)];
-
         if (enemyCount < enemies.length) {
-            enemies[enemyCount] = new Enemy(startX, startY, speed, type);
-            enemyCount++;
+            enemies[enemyCount++] = new Enemy(x, -40, speed, type);
         }
     }
+
+    // ── Helpers privados ──────────────────────────────────────
+
     private void removeBullet(int index) {
-        for (int i = index; i < bulletCount - 1; i++) {
+        for (int i = index; i < bulletCount - 1; i++)
             bullets[i] = bullets[i + 1];
-        }
         bulletCount--;
     }
 
     private void removeEnemy(int index) {
-        for (int i = index; i < enemyCount - 1; i++) {
+        for (int i = index; i < enemyCount - 1; i++)
             enemies[i] = enemies[i + 1];
-        }
         enemyCount--;
     }
+
+    // ── Getters ───────────────────────────────────────────────
+
     public Player getPlayer() {
         return player;
     }
