@@ -53,14 +53,10 @@ public class Player {
     }
 
     public void update(int panelWidth) {
-
-        if (x < 0) {
+        if (x < 0)
             x = 0;
-        }
-
-        if (x + width > panelWidth) {
+        if (x + width > panelWidth)
             x = panelWidth - width;
-        }
     }
 
     public void setPosition(int x, int y) {
@@ -68,21 +64,19 @@ public class Player {
         this.y = y;
     }
 
-    public int getX() { 
-        return x; 
-    }
-    public int getY() { 
-        return y; 
-    }
-    public int getWidth() { 
-        return width; 
-    }
-    public int getHeight() { 
-        return height; 
+    public int getX() {
+        return x;
     }
 
-    public void clamp(int panelWidth) {
-        if (x < 0) x = 0;
-        if (x + width > panelWidth) x = panelWidth - width;
+    public int getY() {
+        return y;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
     }
 }
