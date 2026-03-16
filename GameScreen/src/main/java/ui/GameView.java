@@ -88,19 +88,17 @@ public class GameView extends Pane {
     // ── Renderizado ───────────────────────────────────────────
 
     private void render() {
-
         drawBackground();
         drawPlayer();
         drawBullets();
         drawEnemies();
         drawHealthBar(gc);
-
+        drawScore(gc);
     }
 
     private void drawBackground() {
         gc.setFill(Color.BLACK);
         gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
-
     }
 
     private void drawPlayer() {
@@ -120,11 +118,9 @@ public class GameView extends Pane {
     }
 
     private void drawBullets() {
-
         Bullet[] bullets = gameLogic.getBullets();
 
         for (int i = 0; i < gameLogic.getBulletCount(); i++) {
-
             Bullet bullet = bullets[i];
 
             gc.drawImage(
@@ -137,10 +133,9 @@ public class GameView extends Pane {
     }
 
     private void drawEnemies() {
-
         Enemy[] enemies = gameLogic.getEnemies();
-        for (int i = 0; i < gameLogic.getEnemyCount(); i++) {
 
+        for (int i = 0; i < gameLogic.getEnemyCount(); i++) {
             Enemy enemy = enemies[i];
 
             gc.drawImage(
@@ -188,22 +183,25 @@ public class GameView extends Pane {
 
         // texto de vida
         gc.setFill(Color.WHITE);
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 13));
         gc.fillText(
                 player.getHp() + " / " + player.getMaxHp(),
                 x + barWidth / 2 - 20,
                 y + 17);
     }
 
-    private void spawnEnemies() {
+    private void drawScore(GraphicsContext gc) {
+        gc.setFill(Color.WHITE);
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 20));
+        gc.fillText("Score: " + gameLogic.getScore(), canvas.getWidth() - 160, 40);
+    }
 
+    private void spawnEnemies() {
         long currentTime = System.currentTimeMillis();
 
         if (currentTime - lastEnemySpawn >= enemySpawnCooldown) {
-
             gameLogic.spawnEnemy((int) canvas.getWidth());
-
             lastEnemySpawn = currentTime;
         }
     }
-
 }

@@ -11,6 +11,7 @@ public class GameLogic {
     private final long shootCooldown = 300;
 
     private static final int SCORE_PER_KILL = 10;
+    private int score = 0;
 
     public GameLogic() {
         bullets = new Bullet[100];
@@ -20,7 +21,6 @@ public class GameLogic {
 
     // ── Movimiento ────────────────────────────────────────────
 
-    // Métodos para mover al jugador
     public void moveLeft() {
         player.moveLeft();
     }
@@ -31,7 +31,6 @@ public class GameLogic {
 
     // ── Disparo ───────────────────────────────────────────────
 
-    // Métodos para disparar según el tipo de ataque
     public void shootYellow() {
         shoot(AttackType.YELLOW);
     }
@@ -44,7 +43,6 @@ public class GameLogic {
         shoot(AttackType.BLUE);
     }
 
-    // Método privado para manejar el disparo + cooldown
     private void shoot(AttackType type) {
         long now = System.currentTimeMillis();
         if (now - lastShotTime < shootCooldown)
@@ -80,80 +78,58 @@ public class GameLogic {
         player.update(panelWidth);
     }
 
-    // Mover balas
-    for(
-
-    int i = 0;i<bulletCount;i++)
-
     private void updateBullets(int panelHeight) {
+        // Mover balas
         for (int i = 0; i < bulletCount; i++) {
             bullets[i].update();
+        }
 
         // Eliminar balas fuera de pantalla
         for (int i = 0; i < bulletCount; i++) {
             if (bullets[i].isOutOfBounds(panelHeight)) {
                 removeBullet(i);
-                removeBullet(i);
                 i--;
             }
         }
-
-        // Mover enemigos
-        for (int i = 0; i < enemyCount; i++)
     }
 
     private void updateEnemies(int panelHeight) {
+        // Mover enemigos
         for (int i = 0; i < enemyCount; i++) {
             enemies[i].update();
-
-            // Eliminar enemigos fuera de pantalla
         }
+
+        // Eliminar enemigos fuera de pantalla
         for (int i = 0; i < enemyCount; i++) {
             if (enemies[i].isOutOfBounds(panelHeight)) {
-                removeEnemy(i);
                 removeEnemy(i);
                 i--;
             }
         }
-
-        // Colisiones bala-enemigo
     }
+
+    // ── Colisiones ────────────────────────────────────────────
 
     private void checkBulletCollisions() {
         for (int i = 0; i < bulletCount; i++) {
-            Bullet b = bullets[i];
+            Bullet bullet = bullets[i];
             for (int j = 0; j < enemyCount; j++) {
-                Enemy e = enemies[j];
-                boolean hit = b.getX() < e.getX() + e.getWidth() &&
-                        b.getX() + b.getWidth() > e.getX() &&
-                        b.getY() < e.getY() + e.getHeight() &&
-                        b.getY() + b.getHeight() > e.getY();
+                Enemy enemy = enemies[j];
+                boolean collision = bullet.getX() < enemy.getX() + enemy.getWidth() &&
+                        bullet.getX() + bullet.getWidth() > enemy.getX() &&
+                        bullet.getY() < enemy.getY() + enemy.getHeight() &&
+                        bullet.getY() + bullet.getHeight() > enemy.getY();
 
-                if (hit && b.getType() == e.getType()) {
+                if (collision && bullet.getType() == enemy.getType()) {
                     removeEnemy(j);
                     removeBullet(i);
-                    player.addScore(SCORE_PER_KILL);
+                    score += SCORE_PER_KILL;
                     i--;
                     break;
-                Enemy enemy = enemies[j];
-                boolean collision =
-                    bullet.getX() < enemy.getX() + enemy.getWidth() &&
-                    bullet.getX() + bullet.getWidth() > enemy.getX() &&
-                    bullet.getY() < enemy.getY() + enemy.getHeight() &&
-                    bullet.getY() + bullet.getHeight() > enemy.getY();
-                if (collision) {
-                    if (bullet.getType() == enemy.getType()) {
-                        removeEnemy(j);
-                        removeBullet(i);
-                        i--;
-                        break;
-                    }
                 }
             }
         }
     }
-
-    // ── Spawn de enemigos ─────────────────────────────────────
 
     private void checkPlayerCollisions() {
         for (int i = 0; i < enemyCount; i++) {
@@ -173,22 +149,19 @@ public class GameLogic {
                 e.getY() + e.getHeight() > p.getY();
     }
 
-    // Método para generar enemigos aleatorios
+    // ── Spawn de enemigos ─────────────────────────────────────
+
     public void spawnEnemy(int panelWidth) {
-        int x = (int) (Math.random() * (panelWidth - 40));
-        int speed = 2 + (int) (Math.random() * 3);
         int startX = (int) (Math.random() * (panelWidth - 40));
-        int startY = 10;
         int speed = 2 + (int) (Math.random() * 2);
         AttackType type = AttackType.values()[(int) (Math.random() * AttackType.values().length)];
         if (enemyCount < enemies.length) {
-            enemies[enemyCount++] = new Enemy(x, -40, speed, type);
+            enemies[enemyCount++] = new Enemy(startX, -40, speed, type);
         }
     }
 
     // ── Helpers privados ──────────────────────────────────────
 
-    // Métodos para eliminar balas y enemigos
     private void removeBullet(int index) {
         for (int i = index; i < bulletCount - 1; i++)
             bullets[i] = bullets[i + 1];
@@ -221,5 +194,9 @@ public class GameLogic {
 
     public int getEnemyCount() {
         return enemyCount;
+    }
+
+    public int getScore() {
+        return score;
     }
 }
