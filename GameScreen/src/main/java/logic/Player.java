@@ -6,14 +6,42 @@ public class Player {
     private int y;
     private int width = 100;
     private int height = 100;
-    private int speed = 15;
+    private int speed = 7;
+
     private int hp;
-    private int score = 0;
+    private int maxHp;
+
+    private long lastDamageTime = 0;
+    private final long invulnerabilityTime = 800;
 
     public Player(int x, int y, int hp) {
         this.x = x;
         this.y = y;
         this.hp = hp;
+        this.maxHp = hp;
+    }
+
+    public void damage(int amount) {
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastDamageTime < invulnerabilityTime) {
+            return;
+        }
+        hp -= amount;
+        if (hp < 0) {
+            hp = 0;
+        }
+    }
+
+    public boolean isInvulnerable() {
+        return System.currentTimeMillis() - lastDamageTime < invulnerabilityTime;
+    }
+
+    public int getHp() {
+        return hp;
+    }
+
+    public int getMaxHp() {
+        return maxHp;
     }
 
     public void moveLeft() {
@@ -34,31 +62,6 @@ public class Player {
     public void setPosition(int x, int y) {
         this.x = x;
         this.y = y;
-    }
-
-    public void takeDamage(int damage) {
-        hp -= damage;
-        if (hp < 0)
-            hp = 0;
-    }
-
-    public void addScore(int points) {
-        score += points;
-    }
-
-    public void clamp(int panelWidth) {
-        if (x < 0)
-            x = 0;
-        if (x + width > panelWidth)
-            x = panelWidth - width;
-    }
-
-    public int getHp() {
-        return hp;
-    }
-
-    public int getScore() {
-        return score;
     }
 
     public int getX() {
