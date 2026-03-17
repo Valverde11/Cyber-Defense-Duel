@@ -178,7 +178,6 @@ public class LoginScreen {
         Scene scene = new Scene(gameView, 1280, 720);
         stage.setScene(scene);
         stage.setTitle("Cyber Defense Duel");
-        stage.setFullScreen(true);
         gameView.requestFocus();
         gameView.startGame();
     }
