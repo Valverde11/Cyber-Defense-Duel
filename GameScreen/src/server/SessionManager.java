@@ -1,5 +1,7 @@
 package server;
 
+import com.google.gson.JsonObject; // por si se usa gson aca
+
 public class SessionManager {
 
     private final DatabaseManager db;
