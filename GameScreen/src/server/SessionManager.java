@@ -1,5 +1,6 @@
 package server;
 
+import persistence.DatabaseManager;
 import com.google.gson.JsonObject; // por si se usa gson aca
 
 public class SessionManager {
