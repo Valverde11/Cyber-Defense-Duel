@@ -3,9 +3,9 @@ client\ServerConnection.class
 model\UserRecord.class
 client\AvatarScreen.class
 main\Main.class
-model\GameConfig.class
 logic\AttackType.class
 logic\Bullet.class
+logic\GameLogic$1.class
 logic\Player.class
 ui\GameView$1.class
 persistence\SimpleJson.class

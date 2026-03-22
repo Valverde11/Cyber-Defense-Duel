@@ -10,6 +10,7 @@ import javafx.scene.text.FontWeight;
 import logic.GameLogic;
 import logic.Bullet;
 import logic.Enemy;
+import logic.GameConfig;
 import logic.Player;
 
 public class GameView extends Pane {
@@ -24,10 +25,10 @@ public class GameView extends Pane {
     private long lastEnemySpawn = 0;
     private final long enemySpawnCooldown = 500;
 
-    public GameView() {
+    public GameView(GameConfig config) {
         canvas = new Canvas(1280, 720);
         gc = canvas.getGraphicsContext2D();
-        gameLogic = new GameLogic();
+        gameLogic = new GameLogic(config);
         getChildren().add(canvas);
         setFocusTraversable(true);
         setupControls();
@@ -94,6 +95,7 @@ public class GameView extends Pane {
         drawEnemies();
         drawHealthBar(gc);
         drawScore(gc);
+        drawLevel(gc);
     }
 
     private void drawBackground() {
@@ -194,6 +196,12 @@ public class GameView extends Pane {
         gc.setFill(Color.WHITE);
         gc.setFont(Font.font("Arial", FontWeight.BOLD, 20));
         gc.fillText("Score: " + gameLogic.getScore(), canvas.getWidth() - 160, 40);
+    }
+
+    private void drawLevel(GraphicsContext gc) {
+        gc.setFill(Color.WHITE);
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 20));
+        gc.fillText("Level: " + gameLogic.getLevel(), canvas.getWidth() - 160, 70);
     }
 
     private void spawnEnemies() {

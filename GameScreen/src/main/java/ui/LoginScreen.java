@@ -8,6 +8,7 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.*;
 import javafx.stage.Stage;
+import logic.GameConfig;
 import persistence.DatabaseManager;
 import model.UserRecord;
 
@@ -15,9 +16,11 @@ public class LoginScreen {
 
     private final DatabaseManager db = new DatabaseManager();
     private final Stage stage;
+    private final GameConfig config;
 
-    public LoginScreen(Stage stage) {
+    public LoginScreen(Stage stage, GameConfig config) {
         this.stage = stage;
+        this.config = config;
     }
 
     public void show() {
@@ -174,7 +177,7 @@ public class LoginScreen {
     }
 
     private void goToGame() {
-        GameView gameView = new GameView();
+        GameView gameView = new GameView(config);
         Scene scene = new Scene(gameView, 1280, 720);
         stage.setScene(scene);
         stage.setTitle("Cyber Defense Duel");

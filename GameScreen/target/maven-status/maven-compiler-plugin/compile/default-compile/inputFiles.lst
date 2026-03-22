@@ -3,10 +3,10 @@ D:\Proyecto Modelados\Cyber-Defense-Duel\GameScreen\src\main\java\client\ServerC
 D:\Proyecto Modelados\Cyber-Defense-Duel\GameScreen\src\main\java\logic\AttackType.java
 D:\Proyecto Modelados\Cyber-Defense-Duel\GameScreen\src\main\java\logic\Bullet.java
 D:\Proyecto Modelados\Cyber-Defense-Duel\GameScreen\src\main\java\logic\Enemy.java
+D:\Proyecto Modelados\Cyber-Defense-Duel\GameScreen\src\main\java\logic\GameConfig.java
 D:\Proyecto Modelados\Cyber-Defense-Duel\GameScreen\src\main\java\logic\GameLogic.java
 D:\Proyecto Modelados\Cyber-Defense-Duel\GameScreen\src\main\java\logic\Player.java
 D:\Proyecto Modelados\Cyber-Defense-Duel\GameScreen\src\main\java\main\Main.java
-D:\Proyecto Modelados\Cyber-Defense-Duel\GameScreen\src\main\java\model\GameConfig.java
 D:\Proyecto Modelados\Cyber-Defense-Duel\GameScreen\src\main\java\model\UserRecord.java
 D:\Proyecto Modelados\Cyber-Defense-Duel\GameScreen\src\main\java\persistence\DatabaseManager.java
 D:\Proyecto Modelados\Cyber-Defense-Duel\GameScreen\src\main\java\persistence\SimpleJson.java

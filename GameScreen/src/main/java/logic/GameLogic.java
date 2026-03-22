@@ -1,7 +1,7 @@
 package logic;
 
 public class GameLogic {
-
+    private GameConfig config;
     private Player player;
     private Bullet[] bullets;
     private int bulletCount = 0;
@@ -10,13 +10,13 @@ public class GameLogic {
     private long lastShotTime = 0;
     private final long shootCooldown = 300;
 
-    private static final int SCORE_PER_KILL = 10;
     private int score = 0;
 
-    public GameLogic() {
+    public GameLogic(GameConfig config) {
+        this.config = config;
         bullets = new Bullet[100];
         enemies = new Enemy[50];
-        player = new Player(150, 1200, 100);
+        player = new Player(150, 1200, config.initialHp);
     }
 
     // ── Movimiento ────────────────────────────────────────────
@@ -123,7 +123,7 @@ public class GameLogic {
                 if (collision && bullet.getType() == enemy.getType()) {
                     removeEnemy(j);
                     removeBullet(i);
-                    score += SCORE_PER_KILL;
+                    score += config.scorePerKill;
                     i--;
                     break;
                 }
@@ -135,7 +135,19 @@ public class GameLogic {
         for (int i = 0; i < enemyCount; i++) {
             Enemy enemy = enemies[i];
             if (collision(enemy, player)) {
-                player.damage(10);
+                int damage = 0;
+                switch (enemy.getType()) {
+                    case YELLOW:
+                        damage = config.damageYellow;
+                        break;
+                    case RED:
+                        damage = config.damageRed;
+                        break;
+                    case BLUE:
+                        damage = config.damageBlue;
+                        break;
+                }
+                player.damage(damage);
                 removeEnemy(i);
                 i--;
             }
@@ -152,11 +164,12 @@ public class GameLogic {
     // ── Spawn de enemigos ─────────────────────────────────────
 
     public void spawnEnemy(int panelWidth) {
+        int level = getLevel();
         int startX = (int) (Math.random() * (panelWidth - 40));
-        int speed = 2 + (int) (Math.random() * 2);
+        double speed = config.baseAttackSpeed + config.speedAddPerLevel * level;
         AttackType type = AttackType.values()[(int) (Math.random() * AttackType.values().length)];
         if (enemyCount < enemies.length) {
-            enemies[enemyCount++] = new Enemy(startX, -40, speed, type);
+            enemies[enemyCount++] = new Enemy(startX, -40, (int) speed, type);
         }
     }
 
@@ -198,5 +211,9 @@ public class GameLogic {
 
     public int getScore() {
         return score;
+    }
+
+    public int getLevel() {
+        return score / config.difficultyStepScore;
     }
 }
