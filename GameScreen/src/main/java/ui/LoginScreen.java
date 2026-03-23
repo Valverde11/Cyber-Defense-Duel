@@ -1,5 +1,13 @@
 package ui;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
+
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -9,14 +17,15 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.*;
 import javafx.stage.Stage;
 import logic.GameConfig;
-import persistence.DatabaseManager;
-import model.UserRecord;
 
 public class LoginScreen {
 
-    private final DatabaseManager db = new DatabaseManager();
     private final Stage stage;
     private final GameConfig config;
+
+    private Socket socket;
+    private BufferedReader in;
+    private PrintWriter out;
 
     public LoginScreen(Stage stage, GameConfig config) {
         this.stage = stage;
@@ -24,8 +33,20 @@ public class LoginScreen {
     }
 
     public void show() {
+        // conectar al servidor
+        try {
+            socket = new Socket("localhost", 5000);
+            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            out = new PrintWriter(socket.getOutputStream(), true);
 
-        // ── Campos ──────────────────────────────────────────
+            System.out.println("Conectado al servidor");
+        } catch (Exception e) {
+            System.out.println("No se pudo conectar al servidor");
+            e.printStackTrace();
+        }
+
+
+        // ── Ui ──────────────────────────────────────────
         TextField userField = new TextField();
         PasswordField passField = new PasswordField();
         Label status = new Label();
@@ -48,13 +69,34 @@ public class LoginScreen {
                 status.setText("Completa todos los campos");
                 return;
             }
-            UserRecord record = db.login(user, pass);
-            if (record != null) {
-                goToGame();
-            } else {
-                status.setTextFill(Color.web("#ff4444"));
-                status.setText("Usuario o contraseña incorrectos");
-            }
+            
+            new Thread(() -> {
+                try {
+                    JsonObject json = new JsonObject();
+                    json.addProperty("type", "LOGIN");
+                    json.addProperty("username", user);
+                    json.addProperty("password", pass);
+
+                    out.println(json.toString());
+
+                    String response = in.readLine();
+                    JsonObject resp = JsonParser.parseString(response).getAsJsonObject();
+                    
+                    javafx.application.Platform.runLater(() -> {
+                        if (resp.get("type").getAsString().equals("LOGIN_OK")) {
+                            status.setTextFill(Color.web("#00c85a"));
+                            status.setText("Login exitoso");
+                            goToGame();
+                        } else {
+                            status.setTextFill(Color.web("#ff4444"));
+                            status.setText("Login fallido");
+                        }
+                    });
+                
+                } catch (Exception ex) {    
+                    ex.printStackTrace();
+                }   
+            }).start(); 
         });
 
         registerBtn.setOnAction(e -> {
@@ -65,13 +107,33 @@ public class LoginScreen {
                 status.setText("Completa todos los campos");
                 return;
             }
-            if (db.register(user, pass)) {
-                status.setTextFill(Color.web("#00c85a"));
-                status.setText("Cuenta creada, ahora inicia sesión");
-            } else {
-                status.setTextFill(Color.web("#ff4444"));
-                status.setText("Ese usuario ya existe");
-            }
+
+            new Thread(() -> {
+                try {
+                    JsonObject json = new JsonObject();
+                    json.addProperty("type", "REGISTER");
+                    json.addProperty("username", user);
+                    json.addProperty("password", pass);
+
+                    out.println(json.toString());
+
+                    String response = in.readLine();
+                    JsonObject resp = JsonParser.parseString(response).getAsJsonObject();
+
+                    javafx.application.Platform.runLater(() -> {
+                        if (resp.get("type").getAsString().equals("REGISTER_OK")) {
+                            status.setTextFill(Color.web("#00c85a"));
+                            status.setText("Cuenta creada, ahora inicia sesión");
+                        } else {
+                            status.setTextFill(Color.web("#ff4444"));
+                            status.setText("Ese usuario ya existe");
+                        }
+                    });
+
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }).start();
         });
 
         // ── Título ───────────────────────────────────────────
