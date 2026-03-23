@@ -1,7 +1,7 @@
 package server;
 
 import persistence.DatabaseManager;
-import com.google.gson.Gson;
+import model.UserRecord;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.io.BufferedReader;
@@ -20,9 +20,8 @@ class ClientHandler implements Runnable {
     private PrintWriter    out;
  
     private String username;          // se llena luego del login exitoso
+    private String selectedMap = "";  // seleccion local hasta que Session arme la partida
     private GameSession currentSession; // sesion a la que pertenece este cliente
- 
-    private static final Gson gson = new Gson();
  
     public ClientHandler(Socket socket, DatabaseManager db, SessionManager sessionMgr) {
         this.socket     = socket;
@@ -113,26 +112,22 @@ class ClientHandler implements Runnable {
     private void handleRegister(JsonObject json) {
         String user = json.get("username").getAsString().trim();
         String pass = json.get("password").getAsString().trim();
- 
-        if (db.userExists(user)) {
+
+        if (db.register(user, pass)) {
+            send(buildResponse("REGISTER_OK", "Usuario registrado correctamente."));
+        } else {
             send(buildResponse("REGISTER_FAIL", "El usuario ya existe."));
-            return;
         }
-        db.registerUser(user, pass);
-        send(buildResponse("REGISTER_OK", "Usuario registrado correctamente."));
     }
  
     /** Valida credenciales contra database.json */
     private void handleLogin(JsonObject json) {
         String user = json.get("username").getAsString().trim();
         String pass = json.get("password").getAsString().trim();
- 
-        if (!db.userExists(user)) {
-            send(buildResponse("LOGIN_FAIL", "Usuario no encontrado."));
-            return;
-        }
-        if (!db.validatePassword(user, pass)) {
-            send(buildResponse("LOGIN_FAIL", "Contrasena incorrecta."));
+
+        UserRecord record = db.login(user, pass);
+        if (record == null) {
+            send(buildResponse("LOGIN_FAIL", "Usuario o contrasena incorrectos."));
             return;
         }
  
@@ -143,7 +138,11 @@ class ClientHandler implements Runnable {
         JsonObject resp = new JsonObject();
         resp.addProperty("type", "LOGIN_OK");
         resp.addProperty("username", username);
-        resp.add("stats", db.getUserStats(username));
+
+        JsonObject stats = new JsonObject();
+        stats.addProperty("avatar", record.avatar);
+        stats.addProperty("highScore", record.highScore);
+        resp.add("stats", stats);
         send(resp.toString());
     }
  
@@ -151,17 +150,15 @@ class ClientHandler implements Runnable {
     private void handleSelectAvatar(JsonObject json) {
         if (username == null) { send(buildError("Debes iniciar sesion primero.")); return; }
         String avatar = json.get("avatar").getAsString();
-        db.setAvatar(username, avatar);
+        db.saveAvatar(username, avatar);
         send(buildResponse("AVATAR_OK", "Avatar seleccionado: " + avatar));
     }
  
     /** Confirma la seleccion de mapa (se reenvía al oponente cuando ambos estén listos) */
     private void handleSelectMap(JsonObject json) {
         if (username == null) { send(buildError("Debes iniciar sesion primero.")); return; }
-        String map = json.get("map").getAsString();
-        // Guardamos en memoria; la sesion decide el mapa final
-        db.setLastMap(username, map);
-        send(buildResponse("MAP_OK", "Mapa seleccionado: " + map));
+        selectedMap = json.get("map").getAsString();
+        send(buildResponse("MAP_OK", "Mapa seleccionado: " + selectedMap));
     }
  
     /**
@@ -242,5 +239,6 @@ class ClientHandler implements Runnable {
     // Getters usados por GameSession y SessionManager
     // -------------------------------------------------------------------------
     public String getUsername()          { return username; }
+    public String getSelectedMap()       { return selectedMap; }
     public void   setSession(GameSession s) { this.currentSession = s; }
 }
