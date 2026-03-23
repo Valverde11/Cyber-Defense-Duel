@@ -187,6 +187,11 @@ public class GameLogic {
         enemyCount--;
     }
 
+    // ── Estado del juego ──────────────────────────────────────
+    public boolean isGameOver() {
+        return player.getHp() <= 0;
+    }
+
     // ── Getters ───────────────────────────────────────────────
 
     public Player getPlayer() {

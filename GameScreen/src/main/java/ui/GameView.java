@@ -25,6 +25,12 @@ public class GameView extends Pane {
     private long lastEnemySpawn = 0;
     private final long enemySpawnCooldown = 500;
 
+    private boolean gameOver = false;
+    private boolean playerWon = false;
+    private String endMessage = "";
+    private boolean gameEnded = false;
+    private boolean opponentDead = false;
+
     public GameView(GameConfig config) {
         canvas = new Canvas(1280, 720);
         gc = canvas.getGraphicsContext2D();
@@ -72,6 +78,8 @@ public class GameView extends Pane {
     }
 
     private void update() {
+        if (gameOver) return;
+
         if (!playerPositioned) {
             gameLogic.centerPlayer((int) canvas.getWidth(), (int) canvas.getHeight());
             playerPositioned = true;
@@ -84,6 +92,32 @@ public class GameView extends Pane {
         spawnEnemies();
 
         gameLogic.update((int) canvas.getWidth(), (int) canvas.getHeight());
+
+        if (gameLogic.getScore() >= 100 && !opponentDead) {
+            opponentDead = true;
+        }
+
+        if (gameLogic.isGameOver()) {
+            if(opponentDead) {
+                triggerGameWin();
+            } else {
+                triggerGameOver();
+            }
+        }
+
+    }
+
+    // ── Game over y Game win ───────────────────────────────────────────
+    private void triggerGameOver() {
+        gameOver = true;
+
+        endMessage = "GAME OVER\nScore: " + gameLogic.getScore();
+    }
+
+    private void triggerGameWin() {
+        gameOver = true;
+
+        endMessage = "¡GANASTE!\nScore: " + gameLogic.getScore();
     }
 
     // ── Renderizado ───────────────────────────────────────────
@@ -96,6 +130,7 @@ public class GameView extends Pane {
         drawHealthBar(gc);
         drawScore(gc);
         drawLevel(gc);
+        drawEndGame();
     }
 
     private void drawBackground() {
@@ -210,6 +245,72 @@ public class GameView extends Pane {
         if (currentTime - lastEnemySpawn >= enemySpawnCooldown) {
             gameLogic.spawnEnemy((int) canvas.getWidth());
             lastEnemySpawn = currentTime;
+        }
+    }
+
+    private void drawGameOver() {
+        gc.setFill(Color.rgb(0, 0, 0, 0.7));
+        gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
+
+        gc.setFill(Color.RED);
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 50));
+
+        gc.fillText("GAME OVER", canvas.getWidth() / 2 - 180, canvas.getHeight() / 2 - 40);
+
+        gc.setFill(Color.WHITE);
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 25));
+
+        gc.fillText(
+            "Score: " + gameLogic.getScore(),
+            canvas.getWidth() / 2 - 80,
+            canvas.getHeight() / 2 + 20
+        );
+    }
+
+    private void drawGameWin() {
+        gc.setFill(Color.rgb(0, 0, 0, 0.7));
+        gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
+
+        gc.setFill(Color.GREEN);
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 50));
+
+        gc.fillText("YOU WIN", canvas.getWidth() / 2 - 180, canvas.getHeight() / 2 - 40);
+
+        gc.setFill(Color.WHITE);
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 25));
+
+        gc.fillText(
+            "Score: " + gameLogic.getScore(),
+            canvas.getWidth() / 2 - 80,
+            canvas.getHeight() / 2 + 20
+        );
+    }
+
+    private void drawEndGame() {
+
+        // 🔥 mensaje mientras sigues vivo pero el otro murió
+        if (opponentDead && !gameEnded) {
+            gc.setFill(Color.YELLOW);
+            gc.setFont(Font.font("Arial", FontWeight.BOLD, 20));
+            gc.fillText(
+                "Opponent defeated! Keep playing...",
+                canvas.getWidth() / 2 - 180,
+                100
+            );
+        }
+
+        // 🔥 pantalla final
+        if (gameEnded) {
+
+            // fondo oscuro
+            gc.setFill(Color.rgb(0, 0, 0, 0.7));
+            gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
+
+            if (playerWon) {
+                drawGameWin();
+            } else {
+                drawGameOver();
+            }
         }
     }
 }
