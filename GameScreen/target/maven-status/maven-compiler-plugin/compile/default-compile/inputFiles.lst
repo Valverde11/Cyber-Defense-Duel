@@ -10,5 +10,9 @@ D:\Proyecto Modelados\Cyber-Defense-Duel\GameScreen\src\main\java\main\Main.java
 D:\Proyecto Modelados\Cyber-Defense-Duel\GameScreen\src\main\java\model\UserRecord.java
 D:\Proyecto Modelados\Cyber-Defense-Duel\GameScreen\src\main\java\persistence\DatabaseManager.java
 D:\Proyecto Modelados\Cyber-Defense-Duel\GameScreen\src\main\java\persistence\SimpleJson.java
+D:\Proyecto Modelados\Cyber-Defense-Duel\GameScreen\src\main\java\server\ClientHandler.java
+D:\Proyecto Modelados\Cyber-Defense-Duel\GameScreen\src\main\java\server\GameServer.java
+D:\Proyecto Modelados\Cyber-Defense-Duel\GameScreen\src\main\java\server\GameSession.java
+D:\Proyecto Modelados\Cyber-Defense-Duel\GameScreen\src\main\java\server\SessionManager.java
 D:\Proyecto Modelados\Cyber-Defense-Duel\GameScreen\src\main\java\ui\GameView.java
 D:\Proyecto Modelados\Cyber-Defense-Duel\GameScreen\src\main\java\ui\LoginScreen.java
