@@ -5,6 +5,7 @@ client\AvatarScreen.class
 main\Main.class
 model\GameConfig.class
 logic\AttackType.class
+ui\MenuScreen.class
 logic\Bullet.class
 logic\Player.class
 ui\GameView$1.class
