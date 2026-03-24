@@ -3,6 +3,7 @@ package ui;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.layout.Pane;
+import audio.AudioManager;
 import javafx.animation.AnimationTimer;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -21,23 +22,28 @@ public class GameView extends Pane {
     private boolean leftPressed = false;
     private boolean rightPressed = false;
     private boolean playerPositioned = false;
+    private GameConfig config;
 
     private long lastEnemySpawn = 0;
-    private final long enemySpawnCooldown = 500;
+    private long getSpawnCooldown() {
+        int level = gameLogic.getLevel();
+        double multiplier = Math.pow(config.spawnMultiplierPerLevel, level);
+        return Math.max(100, (long) (500 / multiplier));
+    }
 
-    private boolean gameOver = false;
     private boolean playerWon = false;
-    private String endMessage = "";
     private boolean gameEnded = false;
     private boolean opponentDead = false;
 
     public GameView(GameConfig config) {
+        this.config = config;
         canvas = new Canvas(1280, 720);
         gc = canvas.getGraphicsContext2D();
         gameLogic = new GameLogic(config);
         getChildren().add(canvas);
         setFocusTraversable(true);
         setupControls();
+        AudioManager.playMusic("/sounds/Coconut Mall - Mario Kart Wii OST.mp3");
     }
 
     // ── Teclado ───────────────────────────────────────────────
@@ -78,7 +84,7 @@ public class GameView extends Pane {
     }
 
     private void update() {
-        if (gameOver) return;
+        if (gameEnded) return;
 
         if (!playerPositioned) {
             gameLogic.centerPlayer((int) canvas.getWidth(), (int) canvas.getHeight());
@@ -100,8 +106,12 @@ public class GameView extends Pane {
         if (gameLogic.isGameOver()) {
             if(opponentDead) {
                 triggerGameWin();
+                AudioManager.stopMusic();
+                AudioManager.playSound("/sounds/smb_stage_clear.wav");
             } else {
                 triggerGameOver();
+                AudioManager.stopMusic();
+                AudioManager.playSound("/sounds/smb_gameover.wav");
             }
         }
 
@@ -109,15 +119,13 @@ public class GameView extends Pane {
 
     // ── Game over y Game win ───────────────────────────────────────────
     private void triggerGameOver() {
-        gameOver = true;
-
-        endMessage = "GAME OVER\nScore: " + gameLogic.getScore();
+        gameEnded = true;
+        playerWon = false;
     }
 
     private void triggerGameWin() {
-        gameOver = true;
-
-        endMessage = "¡GANASTE!\nScore: " + gameLogic.getScore();
+        gameEnded = true;
+        playerWon = true;
     }
 
     // ── Renderizado ───────────────────────────────────────────
@@ -242,7 +250,7 @@ public class GameView extends Pane {
     private void spawnEnemies() {
         long currentTime = System.currentTimeMillis();
 
-        if (currentTime - lastEnemySpawn >= enemySpawnCooldown) {
+        if (currentTime - lastEnemySpawn >= getSpawnCooldown()) {
             gameLogic.spawnEnemy((int) canvas.getWidth());
             lastEnemySpawn = currentTime;
         }
@@ -274,7 +282,7 @@ public class GameView extends Pane {
         gc.setFill(Color.GREEN);
         gc.setFont(Font.font("Arial", FontWeight.BOLD, 50));
 
-        gc.fillText("YOU WIN", canvas.getWidth() / 2 - 180, canvas.getHeight() / 2 - 40);
+        gc.fillText("YOU WIN", canvas.getWidth() / 2 - 120, canvas.getHeight() / 2 - 40);
 
         gc.setFill(Color.WHITE);
         gc.setFont(Font.font("Arial", FontWeight.BOLD, 25));
@@ -287,8 +295,6 @@ public class GameView extends Pane {
     }
 
     private void drawEndGame() {
-
-        // 🔥 mensaje mientras sigues vivo pero el otro murió
         if (opponentDead && !gameEnded) {
             gc.setFill(Color.YELLOW);
             gc.setFont(Font.font("Arial", FontWeight.BOLD, 20));
@@ -299,10 +305,8 @@ public class GameView extends Pane {
             );
         }
 
-        // 🔥 pantalla final
         if (gameEnded) {
 
-            // fondo oscuro
             gc.setFill(Color.rgb(0, 0, 0, 0.7));
             gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
 

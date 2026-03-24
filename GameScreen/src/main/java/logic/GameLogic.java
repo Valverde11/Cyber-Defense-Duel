@@ -1,5 +1,7 @@
 package logic;
 
+import audio.AudioManager;
+
 public class GameLogic {
     private GameConfig config;
     private Player player;
@@ -9,7 +11,7 @@ public class GameLogic {
     private int enemyCount = 0;
     private long lastShotTime = 0;
     private final long shootCooldown = 300;
-
+    private int lastLevel = 0;
     private int score = 0;
 
     public GameLogic(GameConfig config) {
@@ -53,6 +55,7 @@ public class GameLogic {
         if (bulletCount < bullets.length) {
             bullets[bulletCount++] = new Bullet(centerX, topY, type);
         }
+        AudioManager.playSound("/sounds/smb_fireball.wav");
     }
 
     // ── Posición inicial del jugador ──────────────────────────
@@ -72,6 +75,11 @@ public class GameLogic {
         updateEnemies(panelHeight);
         checkBulletCollisions();
         checkPlayerCollisions();
+        int currentLevel = getLevel();
+            if (currentLevel > lastLevel) {
+                AudioManager.playSound("/sounds/smb_1-up.wav");
+                lastLevel = currentLevel;
+            }        
     }
 
     private void updatePlayer(int panelWidth) {
@@ -124,6 +132,7 @@ public class GameLogic {
                     removeEnemy(j);
                     removeBullet(i);
                     score += config.scorePerKill;
+                    AudioManager.playSound("/sounds/smb_kick.wav");
                     i--;
                     break;
                 }
@@ -149,6 +158,7 @@ public class GameLogic {
                 }
                 player.damage(damage);
                 removeEnemy(i);
+                AudioManager.playSound("/sounds/smb_fireworks.wav");
                 i--;
             }
         }

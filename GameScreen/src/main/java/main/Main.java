@@ -14,12 +14,12 @@ public class Main extends Application {
         config.initialHp = 100;
         config.baseSpawnRate = 1.0;
         config.baseAttackSpeed = 2.0;
-        config.scorePerKill = 10;
+        config.scorePerKill = 50;
         config.difficultyStepScore = 100;
         config.spawnMultiplierPerLevel = 1.15;
         config.speedAddPerLevel = 0.3;
 
-        config.damageYellow = 5;
+        config.damageYellow = 4;
         config.damageRed = 8;
         config.damageBlue = 10;
 
