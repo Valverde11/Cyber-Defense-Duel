@@ -6,6 +6,13 @@
             "name": "Main",
             "request": "launch",
             "mainClass": "main.Main",
+            "projectName": "game"
+        },
+        {
+            "type": "java",
+            "name": "Main",
+            "request": "launch",
+            "mainClass": "main.Main",
             "projectName": "cyber-defense-duel",
             "vmArgs": "--enable-native-access=javafx.graphics --add-opens=java.base/sun.misc=ALL-UNNAMED --add-modules javafx.controls,javafx.fxml,javafx.graphics,javafx.media"
         },
@@ -21,6 +28,6 @@
             "name": "Current File",
             "request": "launch",
             "mainClass": "${file}"
-        },
+        }
     ]
 }
