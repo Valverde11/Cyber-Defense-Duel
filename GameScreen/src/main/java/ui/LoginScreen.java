@@ -20,6 +20,12 @@ public class LoginScreen {
         this.stage = stage;
     }
 
+
+
+    private void goToMenu(String username) {
+    MenuScreen menu = new MenuScreen(stage, username);
+    menu.show();
+}
     public void show() {
 
         // ── Campos ──────────────────────────────────────────
@@ -47,7 +53,7 @@ public class LoginScreen {
             }
             UserRecord record = db.login(user, pass);
             if (record != null) {
-                goToGame();
+                goToMenu(record.username);
             } else {
                 status.setTextFill(Color.web("#ff4444"));
                 status.setText("Usuario o contraseña incorrectos");
