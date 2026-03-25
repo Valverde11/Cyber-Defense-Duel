@@ -11,12 +11,9 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.*;
 import javafx.stage.Stage;
-import persistence.DatabaseManager;
-import model.UserRecord;
 
 public class LoginScreen {
 
-    private final DatabaseManager db = new DatabaseManager();
     private final Stage stage;
 
     //si no funciona la IP revisar en cmd con ipconfig (IPv4)
@@ -32,6 +29,50 @@ public class LoginScreen {
     MenuScreen menu = new MenuScreen(stage, username);
     menu.show();
 }
+
+    private void initConnection(Label status) {
+        connection.setOnMessage(msg -> Platform.runLater(() -> handleServerMessage(msg, status)));
+        connection.setOnError(err -> Platform.runLater(() -> {
+            status.setTextFill(Color.web("#ff4444"));
+            status.setText(err);
+        }));
+
+        try {
+            connection.connect();
+            status.setTextFill(Color.web("#00c85a"));
+            status.setText("Conectado al servidor");
+        } catch (Exception e) {
+            status.setTextFill(Color.web("#ff4444"));
+            status.setText("No se pudo conectar: " + e.getMessage());
+        }
+    }
+
+    private void handleServerMessage(JsonObject msg, Label status) {
+        String type = msg.get("type").getAsString();
+
+        switch (type) {
+            case "LOGIN_OK":
+                String username = msg.get("username").getAsString();
+                goToMenu(username);
+                break;
+
+            case "LOGIN_FAIL":
+            case "REGISTER_FAIL":
+            case "ERROR":
+                status.setTextFill(Color.web("#ff4444"));
+                status.setText(msg.get("message").getAsString());
+                break;
+
+            case "REGISTER_OK":
+                status.setTextFill(Color.web("#00c85a"));
+                status.setText(msg.get("message").getAsString());
+                break;
+
+            default:
+                break;
+        }
+    }
+
     public void show() {
 
         // ── Campos ──────────────────────────────────────────
@@ -45,6 +86,8 @@ public class LoginScreen {
         status.setTextFill(Color.web("#ff4444"));
         status.setFont(Font.font("Courier New", 13));
 
+        initConnection(status);
+
         // ── Botones ──────────────────────────────────────────
         Button loginBtn = cyberButton("INICIAR SESIÓN", "#00dcff");
         Button registerBtn = cyberButton("REGISTRAR", "#00c85a");
@@ -57,13 +100,7 @@ public class LoginScreen {
                 status.setText("Completa todos los campos");
                 return;
             }
-            UserRecord record = db.login(user, pass);
-            if (record != null) {
-                goToMenu(record.username);
-            } else {
-                status.setTextFill(Color.web("#ff4444"));
-                status.setText("Usuario o contraseña incorrectos");
-            }
+            connection.login(user, pass);
         });
 
         registerBtn.setOnAction(e -> {
@@ -74,13 +111,7 @@ public class LoginScreen {
                 status.setText("Completa todos los campos");
                 return;
             }
-            if (db.register(user, pass)) {
-                status.setTextFill(Color.web("#00c85a"));
-                status.setText("Cuenta creada, ahora inicia sesión");
-            } else {
-                status.setTextFill(Color.web("#ff4444"));
-                status.setText("Ese usuario ya existe");
-            }
+            connection.register(user, pass);
         });
 
         // ── Título ───────────────────────────────────────────
