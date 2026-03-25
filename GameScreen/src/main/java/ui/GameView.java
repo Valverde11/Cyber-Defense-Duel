@@ -5,7 +5,9 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.layout.Pane;
 import client.ServerConnection;
 import audio.AudioManager;
+import com.google.gson.JsonObject;
 import javafx.animation.AnimationTimer;
+import javafx.application.Platform;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
@@ -38,7 +40,13 @@ public class GameView extends Pane {
     private boolean playerWon = false;
     private boolean gameEnded = false;
     private boolean opponentDead = false;
+    private boolean opponentDisconnected = false;
     private boolean deadNotified = false;
+
+    private int opponentHp;
+    private int opponentScore = 0;
+    private int opponentLevel = 0;
+    private String opponentUsername = "Opponent";
 
     public GameView(GameConfig config, ServerConnection connection) {
         this.config = config;
@@ -46,10 +54,48 @@ public class GameView extends Pane {
         canvas = new Canvas(1280, 720);
         gc = canvas.getGraphicsContext2D();
         gameLogic = new GameLogic(config);
+        opponentHp = config.initialHp;
         getChildren().add(canvas);
         setFocusTraversable(true);
         setupControls();
+        setupNetworkHandlers();
         AudioManager.playMusic("/sounds/Coconut Mall - Mario Kart Wii OST.mp3");
+    }
+
+    private void setupNetworkHandlers() {
+        connection.setOnMessage(msg -> Platform.runLater(() -> handleServerMessage(msg)));
+        connection.setOnError(err -> Platform.runLater(() -> {
+            opponentDisconnected = true;
+            gameEnded = true;
+            playerWon = true;
+        }));
+    }
+
+    private void handleServerMessage(JsonObject msg) {
+        String type = msg.get("type").getAsString();
+
+        switch (type) {
+            case "OPPONENT_UPDATE":
+                opponentHp = msg.get("hp").getAsInt();
+                opponentScore = msg.get("score").getAsInt();
+                opponentLevel = msg.get("level").getAsInt();
+                if (msg.has("username")) {
+                    opponentUsername = msg.get("username").getAsString();
+                }
+                break;
+            case "OPPONENT_DEAD":
+                opponentDead = true;
+                break;
+            case "OPPONENT_DISCONNECTED":
+                opponentDisconnected = true;
+                gameEnded = true;
+                playerWon = true;
+                AudioManager.stopMusic();
+                AudioManager.playSound("/sounds/smb_stage_clear.wav");
+                break;
+            default:
+                break;
+        }
     }
 
     // ── Teclado ───────────────────────────────────────────────
@@ -106,20 +152,10 @@ public class GameView extends Pane {
         gameLogic.update((int) canvas.getWidth(), (int) canvas.getHeight());
         pushStateToServer();
 
-        if (gameLogic.getScore() >= 100 && !opponentDead) {
-            opponentDead = true;
-        }
-
         if (gameLogic.isGameOver()) {
-            if(opponentDead) {
-                triggerGameWin();
-                AudioManager.stopMusic();
-                AudioManager.playSound("/sounds/smb_stage_clear.wav");
-            } else {
-                triggerGameOver();
-                AudioManager.stopMusic();
-                AudioManager.playSound("/sounds/smb_gameover.wav");
-            }
+            triggerGameOver();
+            AudioManager.stopMusic();
+            AudioManager.playSound("/sounds/smb_gameover.wav");
 
             if (!deadNotified) {
                 connection.playerDead(gameLogic.getScore());
@@ -159,6 +195,7 @@ public class GameView extends Pane {
         drawBullets();
         drawEnemies();
         drawHealthBar(gc);
+        drawOpponentHud(gc);
         drawScore(gc);
         drawLevel(gc);
         drawEndGame();
@@ -261,13 +298,42 @@ public class GameView extends Pane {
     private void drawScore(GraphicsContext gc) {
         gc.setFill(Color.WHITE);
         gc.setFont(Font.font("Arial", FontWeight.BOLD, 20));
-        gc.fillText("Score: " + gameLogic.getScore(), canvas.getWidth() - 160, 40);
+        gc.fillText("Score: " + gameLogic.getScore(), canvas.getWidth() - 200, 40);
     }
 
     private void drawLevel(GraphicsContext gc) {
         gc.setFill(Color.WHITE);
         gc.setFont(Font.font("Arial", FontWeight.BOLD, 20));
-        gc.fillText("Level: " + gameLogic.getLevel(), canvas.getWidth() - 160, 70);
+        gc.fillText("Level: " + gameLogic.getLevel(), canvas.getWidth() - 200, 70);
+    }
+
+    private void drawOpponentHud(GraphicsContext gc) {
+        double barWidth = 250;
+        double barHeight = 20;
+        double x = canvas.getWidth() - 300;
+        double y = 100;
+
+        double percent = Math.max(0, Math.min(1, opponentHp / 100.0));
+
+        gc.setFill(Color.WHITE);
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 16));
+        gc.fillText(opponentUsername, x, y - 10);
+
+        gc.setFill(Color.rgb(30, 30, 30));
+        gc.fillRoundRect(x, y, barWidth, barHeight, 10, 10);
+
+        gc.setFill(opponentDisconnected ? Color.GRAY : Color.CORNFLOWERBLUE);
+        gc.fillRoundRect(x, y, barWidth * percent, barHeight, 10, 10);
+
+        gc.setStroke(Color.WHITE);
+        gc.setLineWidth(2);
+        gc.strokeRoundRect(x, y, barWidth, barHeight, 10, 10);
+
+        gc.setFill(Color.WHITE);
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 14));
+        gc.fillText("HP Rival: " + opponentHp, x, y + 38);
+        gc.fillText("Score Rival: " + opponentScore, x, y + 58);
+        gc.fillText("Level Rival: " + opponentLevel, x, y + 78);
     }
 
     private void spawnEnemies() {
@@ -318,6 +384,18 @@ public class GameView extends Pane {
     }
 
     private void drawEndGame() {
+        if (opponentDisconnected) {
+            gc.setFill(Color.rgb(0, 0, 0, 0.7));
+            gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
+            gc.setFill(Color.YELLOW);
+            gc.setFont(Font.font("Arial", FontWeight.BOLD, 34));
+            gc.fillText("Opponent disconnected", canvas.getWidth() / 2 - 190, canvas.getHeight() / 2 - 20);
+            gc.setFill(Color.WHITE);
+            gc.setFont(Font.font("Arial", FontWeight.BOLD, 24));
+            gc.fillText("Session ended", canvas.getWidth() / 2 - 90, canvas.getHeight() / 2 + 20);
+            return;
+        }
+
         if (opponentDead && !gameEnded) {
             gc.setFill(Color.YELLOW);
             gc.setFont(Font.font("Arial", FontWeight.BOLD, 20));
