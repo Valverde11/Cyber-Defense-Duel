@@ -15,6 +15,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import logic.GameConfig;
 
 import java.util.Arrays;
 import java.util.List;
@@ -26,6 +27,8 @@ public class MenuScreen {
     private ServerConnection connection;
     private String selectedAvatar;
     private String selectedMap;
+    private GameConfig pendingConfig;
+    private boolean matchFoundReceived;
 
     public MenuScreen(Stage stage, String username, ServerConnection connection) {
         this.stage = stage;
@@ -103,9 +106,17 @@ public class MenuScreen {
                 statusLabel.setText(msg.get("message").getAsString());
                 break;
             case "MATCH_FOUND":
+                matchFoundReceived = true;
                 statusLabel.setTextFill(Color.web("#00c85a"));
                 statusLabel.setText("Partida encontrada. Preparando inicio...");
                 showMatchFoundAlert();
+                tryStartGame();
+                break;
+            case "CONFIG":
+                pendingConfig = parseConfig(msg);
+                statusLabel.setTextFill(Color.web("#00c85a"));
+                statusLabel.setText("Configuracion del servidor recibida");
+                tryStartGame();
                 break;
             case "ERROR":
                 statusLabel.setTextFill(Color.web("#ff4444"));
@@ -181,9 +192,41 @@ public class MenuScreen {
         statusLabel.setText("Entrando a cola...");
     }
 
+    private GameConfig parseConfig(JsonObject msg) {
+        GameConfig config = new GameConfig();
+        config.initialHp = msg.get("initialHp").getAsInt();
+        config.baseSpawnRate = msg.get("baseSpawnRate").getAsDouble();
+        config.baseAttackSpeed = msg.get("baseAttackSpeed").getAsDouble();
+        config.scorePerKill = msg.get("scorePerKill").getAsInt();
+        config.difficultyStepScore = msg.get("difficultyStepScore").getAsInt();
+        config.spawnMultiplierPerLevel = msg.get("spawnMultiplierPerLevel").getAsDouble();
+        config.speedAddPerLevel = msg.get("speedAddPerLevel").getAsDouble();
+
+        JsonObject damage = msg.getAsJsonObject("damageByType");
+        config.damageYellow = damage.get("DDOS").getAsInt();
+        config.damageRed = damage.get("MALWARE").getAsInt();
+        config.damageBlue = damage.get("CRED").getAsInt();
+        return config;
+    }
+
+    private void tryStartGame() {
+        if (!matchFoundReceived || pendingConfig == null) {
+            return;
+        }
+        goToGame(pendingConfig);
+    }
+
     private void goToGame() {
-        // El inicio de partida real se activara cuando llegue CONFIG desde el servidor.
-        System.out.println("Esperando CONFIG para iniciar GameView");
+        // El inicio de partida real se activa al tener MATCH_FOUND + CONFIG.
+    }
+
+    private void goToGame(GameConfig config) {
+        GameView gameView = new GameView(config, connection);
+        Scene scene = new Scene(gameView, 1280, 720);
+        stage.setScene(scene);
+        stage.setTitle("Cyber Defense Duel");
+        gameView.requestFocus();
+        gameView.startGame();
     }
 
     private void goToLogin() {
