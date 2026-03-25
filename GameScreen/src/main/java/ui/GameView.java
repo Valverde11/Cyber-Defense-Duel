@@ -3,6 +3,7 @@ package ui;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.layout.Pane;
+import client.ServerConnection;
 import audio.AudioManager;
 import javafx.animation.AnimationTimer;
 import javafx.scene.paint.Color;
@@ -23,8 +24,11 @@ public class GameView extends Pane {
     private boolean rightPressed = false;
     private boolean playerPositioned = false;
     private GameConfig config;
+    private final ServerConnection connection;
 
     private long lastEnemySpawn = 0;
+    private long lastStatePush = 0;
+    private final long statePushIntervalMs = 200;
     private long getSpawnCooldown() {
         int level = gameLogic.getLevel();
         double multiplier = Math.pow(config.spawnMultiplierPerLevel, level);
@@ -34,9 +38,11 @@ public class GameView extends Pane {
     private boolean playerWon = false;
     private boolean gameEnded = false;
     private boolean opponentDead = false;
+    private boolean deadNotified = false;
 
-    public GameView(GameConfig config) {
+    public GameView(GameConfig config, ServerConnection connection) {
         this.config = config;
+        this.connection = connection;
         canvas = new Canvas(1280, 720);
         gc = canvas.getGraphicsContext2D();
         gameLogic = new GameLogic(config);
@@ -98,6 +104,7 @@ public class GameView extends Pane {
         spawnEnemies();
 
         gameLogic.update((int) canvas.getWidth(), (int) canvas.getHeight());
+        pushStateToServer();
 
         if (gameLogic.getScore() >= 100 && !opponentDead) {
             opponentDead = true;
@@ -113,8 +120,24 @@ public class GameView extends Pane {
                 AudioManager.stopMusic();
                 AudioManager.playSound("/sounds/smb_gameover.wav");
             }
+
+            if (!deadNotified) {
+                connection.playerDead(gameLogic.getScore());
+                deadNotified = true;
+            }
         }
 
+    }
+
+    private void pushStateToServer() {
+        long now = System.currentTimeMillis();
+        if (now - lastStatePush < statePushIntervalMs) {
+            return;
+        }
+
+        Player player = gameLogic.getPlayer();
+        connection.stateUpdate(player.getHp(), gameLogic.getScore(), gameLogic.getLevel());
+        lastStatePush = now;
     }
 
     // ── Game over y Game win ───────────────────────────────────────────
