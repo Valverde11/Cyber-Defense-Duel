@@ -27,6 +27,25 @@ public class GameSession {
     public void start() {
         System.out.println("[GameSession] Partida iniciada");
 
+        JsonObject configMsg = new JsonObject();
+        configMsg.addProperty("type", "CONFIG");
+        configMsg.addProperty("initialHp", 100);
+        configMsg.addProperty("baseSpawnRate", 1.0);
+        configMsg.addProperty("baseAttackSpeed", 2.0);
+        configMsg.addProperty("scorePerKill", 50);
+        configMsg.addProperty("difficultyStepScore", 100);
+        configMsg.addProperty("spawnMultiplierPerLevel", 1.15);
+        configMsg.addProperty("speedAddPerLevel", 0.3);
+
+        JsonObject damageByType = new JsonObject();
+        damageByType.addProperty("DDOS", 4);
+        damageByType.addProperty("MALWARE", 8);
+        damageByType.addProperty("CRED", 10);
+        configMsg.add("damageByType", damageByType);
+
+        player1.send(configMsg.toString());
+        player2.send(configMsg.toString());
+
         JsonObject msg = new JsonObject();
         msg.addProperty("type", "MATCH_FOUND");
 
