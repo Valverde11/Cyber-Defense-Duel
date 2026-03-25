@@ -1,5 +1,6 @@
 package ui;
 
+import client.ServerConnection;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -14,10 +15,12 @@ public class MenuScreen {
 
     private Stage stage;
     private String username;
+    private ServerConnection connection;
 
-    public MenuScreen(Stage stage, String username) {
+    public MenuScreen(Stage stage, String username, ServerConnection connection) {
         this.stage = stage;
         this.username = username;
+        this.connection = connection;
     }
 
     public void show() {
@@ -82,7 +85,7 @@ public class MenuScreen {
     }
 
     private void goToLogin() {
-        LoginScreen login = new LoginScreen(stage);
+        LoginScreen login = new LoginScreen(stage, connection);
         login.show();
     }
 

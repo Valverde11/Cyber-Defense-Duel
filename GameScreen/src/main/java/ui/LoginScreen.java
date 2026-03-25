@@ -17,18 +17,24 @@ public class LoginScreen {
     private final Stage stage;
 
     //si no funciona la IP revisar en cmd con ipconfig (IPv4)
-    private final ServerConnection connection = new ServerConnection("192.168.0.115", 5000);
+    private final ServerConnection connection;
 
     public LoginScreen(Stage stage) {
         this.stage = stage;
+        this.connection = new ServerConnection("192.168.0.115", 5000);
+    }
+
+    public LoginScreen(Stage stage, ServerConnection connection) {
+        this.stage = stage;
+        this.connection = connection;
     }
 
 
 
     private void goToMenu(String username) {
-    MenuScreen menu = new MenuScreen(stage, username);
-    menu.show();
-}
+        MenuScreen menu = new MenuScreen(stage, username, connection);
+        menu.show();
+    }
 
     private void initConnection(Label status) {
         connection.setOnMessage(msg -> Platform.runLater(() -> handleServerMessage(msg, status)));
