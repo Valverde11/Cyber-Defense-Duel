@@ -222,12 +222,4 @@ public class LoginScreen {
         return btn;
     }
 
-    private void goToGame() {
-        GameView gameView = new GameView();
-        Scene scene = new Scene(gameView, 1280, 720);
-        stage.setScene(scene);
-        stage.setTitle("Cyber Defense Duel");
-        gameView.requestFocus();
-        gameView.startGame();
-    }
 }
