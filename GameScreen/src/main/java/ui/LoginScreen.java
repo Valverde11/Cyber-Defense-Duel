@@ -1,5 +1,8 @@
 package ui;
 
+import client.ServerConnection;
+import com.google.gson.JsonObject;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -15,6 +18,9 @@ public class LoginScreen {
 
     private final DatabaseManager db = new DatabaseManager();
     private final Stage stage;
+
+    //si no funciona la IP revisar en cmd con ipconfig (IPv4)
+    private final ServerConnection connection = new ServerConnection("192.168.0.115", 5000);
 
     public LoginScreen(Stage stage) {
         this.stage = stage;
