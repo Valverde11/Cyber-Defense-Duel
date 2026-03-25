@@ -5,6 +5,7 @@ client\AvatarScreen.class
 server\GameSession.class
 main\Main.class
 logic\AttackType.class
+ui\MenuScreen.class
 logic\Bullet.class
 logic\GameLogic$1.class
 logic\Player.class

@@ -1,13 +1,8 @@
 package ui;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.Socket;
-
+import client.ServerConnection;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -16,37 +11,77 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.*;
 import javafx.stage.Stage;
-import logic.GameConfig;
 
 public class LoginScreen {
 
     private final Stage stage;
-    private final GameConfig config;
 
-    private Socket socket;
-    private BufferedReader in;
-    private PrintWriter out;
+    //si no funciona la IP revisar en cmd con ipconfig (IPv4)
+    private final ServerConnection connection;
 
-    public LoginScreen(Stage stage, GameConfig config) {
+    public LoginScreen(Stage stage) {
         this.stage = stage;
-        this.config = config;
+        this.connection = new ServerConnection("192.168.0.115", 5000);
+    }
+
+    public LoginScreen(Stage stage, ServerConnection connection) {
+        this.stage = stage;
+        this.connection = connection;
+    }
+
+
+
+    private void goToMenu(String username) {
+        MenuScreen menu = new MenuScreen(stage, username, connection);
+        menu.show();
+    }
+
+    private void initConnection(Label status) {
+        connection.setOnMessage(msg -> Platform.runLater(() -> handleServerMessage(msg, status)));
+        connection.setOnError(err -> Platform.runLater(() -> {
+            status.setTextFill(Color.web("#ff4444"));
+            status.setText(err);
+        }));
+
+        try {
+            connection.connect();
+            status.setTextFill(Color.web("#00c85a"));
+            status.setText("Conectado al servidor");
+        } catch (Exception e) {
+            status.setTextFill(Color.web("#ff4444"));
+            status.setText("No se pudo conectar: " + e.getMessage());
+        }
+    }
+
+    private void handleServerMessage(JsonObject msg, Label status) {
+        String type = msg.get("type").getAsString();
+
+        switch (type) {
+            case "LOGIN_OK":
+                String username = msg.get("username").getAsString();
+                goToMenu(username);
+                break;
+
+            case "LOGIN_FAIL":
+            case "REGISTER_FAIL":
+            case "ERROR":
+                status.setTextFill(Color.web("#ff4444"));
+                status.setText(msg.get("message").getAsString());
+                break;
+
+            case "REGISTER_OK":
+                status.setTextFill(Color.web("#00c85a"));
+                status.setText(msg.get("message").getAsString());
+                break;
+
+            default:
+                break;
+        }
     }
 
     public void show() {
-        // conectar al servidor
-        try {
-            socket = new Socket("localhost", 5000);
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            out = new PrintWriter(socket.getOutputStream(), true);
 
-            System.out.println("Conectado al servidor");
-        } catch (Exception e) {
-            System.out.println("No se pudo conectar al servidor");
-            e.printStackTrace();
-        }
-
-
-        // ── Ui ──────────────────────────────────────────
+        // ── Campos ──────────────────────────────────────────
         TextField userField = new TextField();
         PasswordField passField = new PasswordField();
         Label status = new Label();
@@ -56,6 +91,8 @@ public class LoginScreen {
 
         status.setTextFill(Color.web("#ff4444"));
         status.setFont(Font.font("Courier New", 13));
+
+        initConnection(status);
 
         // ── Botones ──────────────────────────────────────────
         Button loginBtn = cyberButton("INICIAR SESIÓN", "#00dcff");
@@ -69,34 +106,7 @@ public class LoginScreen {
                 status.setText("Completa todos los campos");
                 return;
             }
-            
-            new Thread(() -> {
-                try {
-                    JsonObject json = new JsonObject();
-                    json.addProperty("type", "LOGIN");
-                    json.addProperty("username", user);
-                    json.addProperty("password", pass);
-
-                    out.println(json.toString());
-
-                    String response = in.readLine();
-                    JsonObject resp = JsonParser.parseString(response).getAsJsonObject();
-                    
-                    javafx.application.Platform.runLater(() -> {
-                        if (resp.get("type").getAsString().equals("LOGIN_OK")) {
-                            status.setTextFill(Color.web("#00c85a"));
-                            status.setText("Login exitoso");
-                            goToGame();
-                        } else {
-                            status.setTextFill(Color.web("#ff4444"));
-                            status.setText("Login fallido");
-                        }
-                    });
-                
-                } catch (Exception ex) {    
-                    ex.printStackTrace();
-                }   
-            }).start(); 
+            connection.login(user, pass);
         });
 
         registerBtn.setOnAction(e -> {
@@ -107,33 +117,7 @@ public class LoginScreen {
                 status.setText("Completa todos los campos");
                 return;
             }
-
-            new Thread(() -> {
-                try {
-                    JsonObject json = new JsonObject();
-                    json.addProperty("type", "REGISTER");
-                    json.addProperty("username", user);
-                    json.addProperty("password", pass);
-
-                    out.println(json.toString());
-
-                    String response = in.readLine();
-                    JsonObject resp = JsonParser.parseString(response).getAsJsonObject();
-
-                    javafx.application.Platform.runLater(() -> {
-                        if (resp.get("type").getAsString().equals("REGISTER_OK")) {
-                            status.setTextFill(Color.web("#00c85a"));
-                            status.setText("Cuenta creada, ahora inicia sesión");
-                        } else {
-                            status.setTextFill(Color.web("#ff4444"));
-                            status.setText("Ese usuario ya existe");
-                        }
-                    });
-
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            }).start();
+            connection.register(user, pass);
         });
 
         // ── Título ───────────────────────────────────────────
@@ -238,12 +222,4 @@ public class LoginScreen {
         return btn;
     }
 
-    private void goToGame() {
-        GameView gameView = new GameView(config);
-        Scene scene = new Scene(gameView, 1280, 720);
-        stage.setScene(scene);
-        stage.setTitle("Cyber Defense Duel");
-        gameView.requestFocus();
-        gameView.startGame();
-    }
 }

@@ -3,6 +3,20 @@
     "configurations": [
         {
             "type": "java",
+            "name": "GameServer",
+            "request": "launch",
+            "mainClass": "server.GameServer",
+            "projectName": "game"
+        },
+        {
+            "type": "java",
+            "name": "Main",
+            "request": "launch",
+            "mainClass": "main.Main",
+            "projectName": "game"
+        },
+        {
+            "type": "java",
             "name": "Main",
             "request": "launch",
             "mainClass": "main.Main",
@@ -21,6 +35,6 @@
             "name": "Current File",
             "request": "launch",
             "mainClass": "${file}"
-        },
+        }
     ]
 }
