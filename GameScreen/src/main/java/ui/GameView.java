@@ -3,6 +3,7 @@ package ui;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.layout.Pane;
+import audio.AudioManager;
 import javafx.animation.AnimationTimer;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -10,6 +11,7 @@ import javafx.scene.text.FontWeight;
 import logic.GameLogic;
 import logic.Bullet;
 import logic.Enemy;
+import logic.GameConfig;
 import logic.Player;
 
 public class GameView extends Pane {
@@ -20,17 +22,28 @@ public class GameView extends Pane {
     private boolean leftPressed = false;
     private boolean rightPressed = false;
     private boolean playerPositioned = false;
+    private GameConfig config;
 
     private long lastEnemySpawn = 0;
-    private final long enemySpawnCooldown = 500;
+    private long getSpawnCooldown() {
+        int level = gameLogic.getLevel();
+        double multiplier = Math.pow(config.spawnMultiplierPerLevel, level);
+        return Math.max(100, (long) (500 / multiplier));
+    }
 
-    public GameView() {
+    private boolean playerWon = false;
+    private boolean gameEnded = false;
+    private boolean opponentDead = false;
+
+    public GameView(GameConfig config) {
+        this.config = config;
         canvas = new Canvas(1280, 720);
         gc = canvas.getGraphicsContext2D();
-        gameLogic = new GameLogic();
+        gameLogic = new GameLogic(config);
         getChildren().add(canvas);
         setFocusTraversable(true);
         setupControls();
+        AudioManager.playMusic("/sounds/Coconut Mall - Mario Kart Wii OST.mp3");
     }
 
     // ── Teclado ───────────────────────────────────────────────
@@ -71,6 +84,8 @@ public class GameView extends Pane {
     }
 
     private void update() {
+        if (gameEnded) return;
+
         if (!playerPositioned) {
             gameLogic.centerPlayer((int) canvas.getWidth(), (int) canvas.getHeight());
             playerPositioned = true;
@@ -83,6 +98,34 @@ public class GameView extends Pane {
         spawnEnemies();
 
         gameLogic.update((int) canvas.getWidth(), (int) canvas.getHeight());
+
+        if (gameLogic.getScore() >= 100 && !opponentDead) {
+            opponentDead = true;
+        }
+
+        if (gameLogic.isGameOver()) {
+            if(opponentDead) {
+                triggerGameWin();
+                AudioManager.stopMusic();
+                AudioManager.playSound("/sounds/smb_stage_clear.wav");
+            } else {
+                triggerGameOver();
+                AudioManager.stopMusic();
+                AudioManager.playSound("/sounds/smb_gameover.wav");
+            }
+        }
+
+    }
+
+    // ── Game over y Game win ───────────────────────────────────────────
+    private void triggerGameOver() {
+        gameEnded = true;
+        playerWon = false;
+    }
+
+    private void triggerGameWin() {
+        gameEnded = true;
+        playerWon = true;
     }
 
     // ── Renderizado ───────────────────────────────────────────
@@ -94,6 +137,8 @@ public class GameView extends Pane {
         drawEnemies();
         drawHealthBar(gc);
         drawScore(gc);
+        drawLevel(gc);
+        drawEndGame();
     }
 
     private void drawBackground() {
@@ -196,12 +241,80 @@ public class GameView extends Pane {
         gc.fillText("Score: " + gameLogic.getScore(), canvas.getWidth() - 160, 40);
     }
 
+    private void drawLevel(GraphicsContext gc) {
+        gc.setFill(Color.WHITE);
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 20));
+        gc.fillText("Level: " + gameLogic.getLevel(), canvas.getWidth() - 160, 70);
+    }
+
     private void spawnEnemies() {
         long currentTime = System.currentTimeMillis();
 
-        if (currentTime - lastEnemySpawn >= enemySpawnCooldown) {
+        if (currentTime - lastEnemySpawn >= getSpawnCooldown()) {
             gameLogic.spawnEnemy((int) canvas.getWidth());
             lastEnemySpawn = currentTime;
+        }
+    }
+
+    private void drawGameOver() {
+        gc.setFill(Color.rgb(0, 0, 0, 0.7));
+        gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
+
+        gc.setFill(Color.RED);
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 50));
+
+        gc.fillText("GAME OVER", canvas.getWidth() / 2 - 180, canvas.getHeight() / 2 - 40);
+
+        gc.setFill(Color.WHITE);
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 25));
+
+        gc.fillText(
+            "Score: " + gameLogic.getScore(),
+            canvas.getWidth() / 2 - 80,
+            canvas.getHeight() / 2 + 20
+        );
+    }
+
+    private void drawGameWin() {
+        gc.setFill(Color.rgb(0, 0, 0, 0.7));
+        gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
+
+        gc.setFill(Color.GREEN);
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 50));
+
+        gc.fillText("YOU WIN", canvas.getWidth() / 2 - 120, canvas.getHeight() / 2 - 40);
+
+        gc.setFill(Color.WHITE);
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 25));
+
+        gc.fillText(
+            "Score: " + gameLogic.getScore(),
+            canvas.getWidth() / 2 - 80,
+            canvas.getHeight() / 2 + 20
+        );
+    }
+
+    private void drawEndGame() {
+        if (opponentDead && !gameEnded) {
+            gc.setFill(Color.YELLOW);
+            gc.setFont(Font.font("Arial", FontWeight.BOLD, 20));
+            gc.fillText(
+                "Opponent defeated! Keep playing...",
+                canvas.getWidth() / 2 - 180,
+                100
+            );
+        }
+
+        if (gameEnded) {
+
+            gc.setFill(Color.rgb(0, 0, 0, 0.7));
+            gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
+
+            if (playerWon) {
+                drawGameWin();
+            } else {
+                drawGameOver();
+            }
         }
     }
 }
