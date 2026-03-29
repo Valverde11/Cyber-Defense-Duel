@@ -21,7 +21,7 @@ public class LoginScreen {
 
     public LoginScreen(Stage stage) {
         this.stage = stage;
-        this.connection = new ServerConnection("192.168.0.11", 5000);
+        this.connection = new ServerConnection("192.168.100.2", 5000);
     }
 
     public LoginScreen(Stage stage, ServerConnection connection) {
