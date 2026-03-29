@@ -9,11 +9,15 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceDialog;
 import javafx.scene.control.Label;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import logic.GameConfig;
 
@@ -21,6 +25,22 @@ import java.util.Arrays;
 import java.util.List;
 
 public class MenuScreen {
+
+    private static final String DEFAULT_AVATAR = "character_1";
+    private static final java.util.List<String> AVATAR_IDS = Arrays.asList(
+            "character_1",
+            "character_2",
+            "character_3"
+    );
+
+    private static String getAvatarName(String avatarId) {
+        return switch (avatarId) {
+            case "character_1" -> "Devil";
+            case "character_2" -> "Last Standing";
+            case "character_3" -> "Red Angel";
+            default -> "Devil";
+        };
+    }
 
     private Stage stage;
     private String username;
@@ -30,10 +50,15 @@ public class MenuScreen {
     private GameConfig pendingConfig;
     private boolean matchFoundReceived;
 
-    public MenuScreen(Stage stage, String username, ServerConnection connection) {
+    public MenuScreen(Stage stage, String username, ServerConnection connection, String initialAvatar) {
         this.stage = stage;
         this.username = username;
         this.connection = connection;
+        this.selectedAvatar = (initialAvatar == null || initialAvatar.isBlank()) ? DEFAULT_AVATAR : initialAvatar;
+    }
+
+    public MenuScreen(Stage stage, String username, ServerConnection connection) {
+        this(stage, username, connection, DEFAULT_AVATAR);
     }
 
     public void show() {
@@ -48,16 +73,20 @@ public class MenuScreen {
         Button avatarButton = cyberButton("AVATAR", "#ffaa00");
         Button mapButton = cyberButton("MAPA", "#8888ff");
         Button logoutButton = cyberButton("CERRAR SESIÓN", "#ff4444");
+        Label avatarStatusLabel = new Label("Avatar actual: " + getAvatarName(selectedAvatar));
+        avatarStatusLabel.setTextFill(Color.web("#9fb3c8"));
+        avatarStatusLabel.setFont(Font.font("Courier New", 12));
         Label statusLabel = new Label("Selecciona avatar y mapa para entrar a cola");
         statusLabel.setTextFill(Color.web("#9fb3c8"));
         statusLabel.setFont(Font.font("Courier New", 12));
 
         initServerHandlers(statusLabel);
+        connection.selectAvatar(selectedAvatar);
 
         // ── ACCIONES DE BOTONES ──────────────────────────
         playButton.setOnAction(e -> joinQueue(statusLabel));
 
-        avatarButton.setOnAction(e -> chooseAvatar(statusLabel));
+        avatarButton.setOnAction(e -> chooseAvatar(statusLabel, avatarStatusLabel));
 
         mapButton.setOnAction(e -> chooseMap(statusLabel));
 
@@ -70,6 +99,7 @@ public class MenuScreen {
                 avatarButton,
                 mapButton,
                 logoutButton,
+                avatarStatusLabel,
                 statusLabel
         );
 
@@ -135,27 +165,83 @@ public class MenuScreen {
         alert.showAndWait();
     }
 
-    private void chooseAvatar(Label statusLabel) {
-        List<String> avatars = Arrays.asList(
-                "Captain Firewall",
-                "Byte Ninja",
-                "Malware Muncher",
-                "Crypto Llama",
-                "Packet Pirate",
-                "Null Pointer Paladin"
-        );
-
-        ChoiceDialog<String> dialog = new ChoiceDialog<>(avatars.get(0), avatars);
+    private void chooseAvatar(Label statusLabel, Label avatarStatusLabel) {
+        Stage dialog = new Stage();
+        dialog.initOwner(stage);
+        dialog.initModality(Modality.APPLICATION_MODAL);
         dialog.setTitle("Seleccion de avatar");
-        dialog.setHeaderText("Elige tu avatar");
-        dialog.setContentText("Avatar:");
 
-        dialog.showAndWait().ifPresent(avatar -> {
-            selectedAvatar = avatar;
-            connection.selectAvatar(avatar);
-            statusLabel.setTextFill(Color.web("#9fb3c8"));
-            statusLabel.setText("Avatar elegido: " + avatar);
-        });
+        Label header = new Label("Elige tu avatar");
+        header.setTextFill(Color.WHITE);
+        header.setFont(Font.font("Courier New", FontWeight.BOLD, 16));
+
+        HBox avatarBox = new HBox(20);
+        avatarBox.setAlignment(Pos.CENTER);
+
+        for (String avatarId : AVATAR_IDS) {
+            ImageView avatarPreview = new ImageView(loadAvatarImage(avatarId));
+            avatarPreview.setFitWidth(100);
+            avatarPreview.setFitHeight(100);
+            avatarPreview.setPreserveRatio(true);
+
+            Label avatarLabel = new Label(getAvatarName(avatarId));
+            avatarLabel.setTextFill(Color.WHITE);
+            avatarLabel.setFont(Font.font("Courier New", 12));
+
+            VBox card = new VBox(8, avatarPreview, avatarLabel);
+            card.setAlignment(Pos.CENTER);
+            card.setStyle(tileStyle(avatarId.equals(selectedAvatar)));
+            card.setUserData(avatarId);
+            card.setOnMouseClicked(e -> {
+                selectedAvatar = avatarId;
+                connection.selectAvatar(selectedAvatar);
+                statusLabel.setTextFill(Color.web("#9fb3c8"));
+                statusLabel.setText("Avatar elegido: " + getAvatarName(selectedAvatar));
+                avatarStatusLabel.setText("Avatar actual: " + getAvatarName(selectedAvatar));
+                refreshSelection(avatarBox);
+                dialog.close();
+            });
+
+            avatarBox.getChildren().add(card);
+        }
+
+        refreshSelection(avatarBox);
+
+        Button closeButton = cyberButton("CERRAR", "#4455ff");
+        closeButton.setOnAction(e -> dialog.close());
+
+        VBox dialogRoot = new VBox(20, header, avatarBox, closeButton);
+        dialogRoot.setAlignment(Pos.CENTER);
+        dialogRoot.setStyle("-fx-background-color: #04060e; -fx-padding: 20;");
+
+        Scene dialogScene = new Scene(dialogRoot, 520, 260);
+        dialog.setScene(dialogScene);
+        dialog.showAndWait();
+    }
+
+    private void refreshSelection(HBox avatarBox) {
+        for (javafx.scene.Node node : avatarBox.getChildren()) {
+            if (node instanceof VBox) {
+                VBox card = (VBox) node;
+                String avatarId = (String) card.getUserData();
+                card.setStyle(tileStyle(avatarId.equals(selectedAvatar)));
+            }
+        }
+    }
+
+    private String tileStyle(boolean selected) {
+        if (selected) {
+            return "-fx-background-color: #111822; -fx-border-color: #00dcff; -fx-border-width: 2; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 10;";
+        }
+        return "-fx-background-color: #111822; -fx-border-color: #445566; -fx-border-width: 1; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 10;";
+    }
+
+    private Image loadAvatarImage(String avatarId) {
+        try {
+            return new Image(getClass().getResourceAsStream("/assets/characters/" + avatarId + ".png"));
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private void chooseMap(Label statusLabel) {
@@ -216,12 +302,8 @@ public class MenuScreen {
         goToGame(pendingConfig);
     }
 
-    private void goToGame() {
-        // El inicio de partida real se activa al tener MATCH_FOUND + CONFIG.
-    }
-
     private void goToGame(GameConfig config) {
-        GameView gameView = new GameView(config, connection);
+        GameView gameView = new GameView(config, connection, selectedAvatar);
         Scene scene = new Scene(gameView, 1280, 720);
         stage.setScene(scene);
         stage.setTitle("Cyber Defense Duel");
