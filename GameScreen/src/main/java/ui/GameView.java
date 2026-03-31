@@ -22,7 +22,7 @@ public class GameView extends Pane {
 
     private Canvas canvas;
     private GraphicsContext gc;
-    private GameLogic gameLogic;
+    private final GameLogic gameLogic;
     private boolean leftPressed = false;
     private boolean rightPressed = false;
     private boolean playerPositioned = false;
