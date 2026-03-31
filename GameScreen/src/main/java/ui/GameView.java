@@ -1,21 +1,22 @@
 package ui;
 
-import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.layout.Pane;
-import client.ServerConnection;
-import audio.AudioManager;
 import com.google.gson.JsonObject;
+
+import audio.AudioManager;
+import client.ServerConnection;
 import javafx.animation.AnimationTimer;
 import javafx.application.Platform;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
+import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
-import logic.GameLogic;
 import logic.Bullet;
 import logic.Enemy;
 import logic.GameConfig;
+import logic.GameLogic;
 import logic.Player;
 
 public class GameView extends Pane {
@@ -29,10 +30,12 @@ public class GameView extends Pane {
     private GameConfig config;
     private final ServerConnection connection;
     private final Image playerImage;
+    private Image backgroundImage;  // ← nuevo
 
     private long lastEnemySpawn = 0;
     private long lastStatePush = 0;
     private final long statePushIntervalMs = 200;
+
     private long getSpawnCooldown() {
         int level = gameLogic.getLevel();
         double multiplier = Math.pow(config.spawnMultiplierPerLevel, level);
@@ -50,12 +53,15 @@ public class GameView extends Pane {
     private int opponentLevel = 0;
     private String opponentUsername = "Opponent";
 
-    public GameView(GameConfig config, ServerConnection connection, String selectedAvatar) {
-        this.config = config;
-        this.connection = connection;
-        this.playerImage = loadAvatarImage(selectedAvatar);
-        canvas = new Canvas(1280, 720);
-        gc = canvas.getGraphicsContext2D();
+    // ── Constructor actualizado con selectedMap ────────────────
+    public GameView(GameConfig config, ServerConnection connection,
+                    String selectedAvatar, String selectedMap) {
+        this.config          = config;
+        this.connection      = connection;
+        this.playerImage     = loadAvatarImage(selectedAvatar);
+        this.backgroundImage = loadMapImage(selectedMap);  // ← nuevo
+        canvas    = new Canvas(1280, 720);
+        gc        = canvas.getGraphicsContext2D();
         gameLogic = new GameLogic(config);
         opponentHp = config.initialHp;
         getChildren().add(canvas);
@@ -76,15 +82,13 @@ public class GameView extends Pane {
 
     private void handleServerMessage(JsonObject msg) {
         String type = msg.get("type").getAsString();
-
         switch (type) {
             case "OPPONENT_UPDATE":
-                opponentHp = msg.get("hp").getAsInt();
+                opponentHp    = msg.get("hp").getAsInt();
                 opponentScore = msg.get("score").getAsInt();
                 opponentLevel = msg.get("level").getAsInt();
-                if (msg.has("username")) {
+                if (msg.has("username"))
                     opponentUsername = msg.get("username").getAsString();
-                }
                 break;
             case "OPPONENT_DEAD":
                 opponentDead = true;
@@ -106,21 +110,19 @@ public class GameView extends Pane {
     private void setupControls() {
         setOnKeyPressed(e -> {
             switch (e.getCode()) {
-                case LEFT, A -> leftPressed = true;
+                case LEFT,  A -> leftPressed  = true;
                 case RIGHT, D -> rightPressed = true;
                 case Q -> gameLogic.shootYellow();
                 case W -> gameLogic.shootRed();
                 case E -> gameLogic.shootBlue();
-                default -> {
-                }
+                default -> {}
             }
         });
         setOnKeyReleased(e -> {
             switch (e.getCode()) {
-                case LEFT, A -> leftPressed = false;
+                case LEFT,  A -> leftPressed  = false;
                 case RIGHT, D -> rightPressed = false;
-                default -> {
-                }
+                default -> {}
             }
         });
     }
@@ -129,8 +131,7 @@ public class GameView extends Pane {
 
     public void startGame() {
         AnimationTimer timer = new AnimationTimer() {
-            @Override
-            public void handle(long now) {
+            @Override public void handle(long now) {
                 update();
                 render();
             }
@@ -140,46 +141,34 @@ public class GameView extends Pane {
 
     private void update() {
         if (gameEnded) return;
-
         if (!playerPositioned) {
             gameLogic.centerPlayer((int) canvas.getWidth(), (int) canvas.getHeight());
             playerPositioned = true;
         }
-        if (leftPressed)
-            gameLogic.moveLeft();
-        if (rightPressed)
-            gameLogic.moveRight();
-
+        if (leftPressed)  gameLogic.moveLeft();
+        if (rightPressed) gameLogic.moveRight();
         spawnEnemies();
-
         gameLogic.update((int) canvas.getWidth(), (int) canvas.getHeight());
         pushStateToServer();
-
         if (gameLogic.isGameOver()) {
             triggerGameOver();
             AudioManager.stopMusic();
             AudioManager.playSound("/sounds/smb_gameover.wav");
-
             if (!deadNotified) {
                 connection.playerDead(gameLogic.getScore());
                 deadNotified = true;
             }
         }
-
     }
 
     private void pushStateToServer() {
         long now = System.currentTimeMillis();
-        if (now - lastStatePush < statePushIntervalMs) {
-            return;
-        }
-
+        if (now - lastStatePush < statePushIntervalMs) return;
         Player player = gameLogic.getPlayer();
         connection.stateUpdate(player.getHp(), gameLogic.getScore(), gameLogic.getLevel());
         lastStatePush = now;
     }
 
-    // ── Game over y Game win ───────────────────────────────────────────
     private void triggerGameOver() {
         gameEnded = true;
         playerWon = false;
@@ -204,136 +193,112 @@ public class GameView extends Pane {
         drawEndGame();
     }
 
+    // ── Fondo con imagen del mapa ─────────────────────────────
+
     private void drawBackground() {
-        gc.setFill(Color.BLACK);
-        gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
+        if (backgroundImage != null) {
+            gc.drawImage(backgroundImage, 0, 0,
+                canvas.getWidth(), canvas.getHeight());
+            // Overlay oscuro para que se vean los elementos del juego
+            gc.setFill(Color.color(0, 0, 0, 0.45));
+            gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
+        } else {
+            gc.setFill(Color.BLACK);
+            gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
+        }
     }
 
     private void drawPlayer() {
         Player player = gameLogic.getPlayer();
-
         if (playerImage != null) {
             gc.drawImage(playerImage,
-                    player.getX(),
-                    player.getY(),
-                    player.getWidth(),
-                    player.getHeight());
+                player.getX(), player.getY(),
+                player.getWidth(), player.getHeight());
         } else {
-            if (player.isInvulnerable()) {
-                gc.setFill(Color.YELLOW);
-            } else {
-                gc.setFill(Color.GREEN);
-            }
-            gc.fillRect(
-                    player.getX(),
-                    player.getY(),
-                    player.getWidth(),
-                    player.getHeight());
+            gc.setFill(player.isInvulnerable() ? Color.YELLOW : Color.GREEN);
+            gc.fillRect(player.getX(), player.getY(),
+                player.getWidth(), player.getHeight());
         }
     }
 
     private void drawBullets() {
         Bullet[] bullets = gameLogic.getBullets();
-
         for (int i = 0; i < gameLogic.getBulletCount(); i++) {
             Bullet bullet = bullets[i];
-
-            gc.drawImage(
-                    bullet.getSprite(),
-                    bullet.getX(),
-                    bullet.getY(),
-                    bullet.getWidth(),
-                    bullet.getHeight());
+            if (bullet.getSprite() != null) {
+                gc.drawImage(bullet.getSprite(),
+                    bullet.getX(), bullet.getY(),
+                    bullet.getWidth(), bullet.getHeight());
+            } else {
+                gc.setFill(typeColor(bullet.getType()));
+                gc.fillRoundRect(bullet.getX(), bullet.getY(),
+                    bullet.getWidth(), bullet.getHeight(), 4, 4);
+            }
         }
     }
 
     private void drawEnemies() {
         Enemy[] enemies = gameLogic.getEnemies();
-
         for (int i = 0; i < gameLogic.getEnemyCount(); i++) {
             Enemy enemy = enemies[i];
-
-            gc.drawImage(
-                    enemy.getSprite(),
-                    enemy.getX(),
-                    enemy.getY(),
-                    enemy.getWidth(),
-                    enemy.getHeight());
+            if (enemy.getSprite() != null) {
+                gc.drawImage(enemy.getSprite(),
+                    enemy.getX(), enemy.getY(),
+                    enemy.getWidth(), enemy.getHeight());
+            } else {
+                gc.setFill(typeColor(enemy.getType()));
+                gc.fillRoundRect(enemy.getX(), enemy.getY(),
+                    enemy.getWidth(), enemy.getHeight(), 8, 8);
+            }
         }
     }
 
-    private Image loadAvatarImage(String avatarId) {
-        if (avatarId == null || avatarId.isBlank()) {
-            avatarId = "character_1";
-        }
-        try {
-            return new Image(getClass().getResourceAsStream("/assets/characters/" + avatarId + ".png"));
-        } catch (Exception e) {
-            return null;
-        }
-    }
+    // ── HUD ───────────────────────────────────────────────────
 
     private void drawHealthBar(GraphicsContext gc) {
         Player player = gameLogic.getPlayer();
-
-        double percent = (double) player.getHp() / player.getMaxHp();
-
-        double barWidth = 300;
+        double percent   = (double) player.getHp() / player.getMaxHp();
+        double barWidth  = 300;
         double barHeight = 25;
+        double x = 20, y = 20;
 
-        double x = 20;
-        double y = 20;
-
-        // fondo
         gc.setFill(Color.rgb(30, 30, 30));
         gc.fillRoundRect(x, y, barWidth, barHeight, 10, 10);
 
-        // color según vida
-        Color healthColor;
-
-        if (percent > 0.6)
-            healthColor = Color.LIMEGREEN;
-        else if (percent > 0.3)
-            healthColor = Color.ORANGE;
-        else
-            healthColor = Color.RED;
-
-        // vida actual
+        Color healthColor = percent > 0.6 ? Color.LIMEGREEN
+                          : percent > 0.3 ? Color.ORANGE : Color.RED;
         gc.setFill(healthColor);
         gc.fillRoundRect(x, y, barWidth * percent, barHeight, 10, 10);
 
-        // borde
         gc.setStroke(Color.WHITE);
         gc.setLineWidth(2);
         gc.strokeRoundRect(x, y, barWidth, barHeight, 10, 10);
 
-        // texto de vida
         gc.setFill(Color.WHITE);
         gc.setFont(Font.font("Arial", FontWeight.BOLD, 13));
-        gc.fillText(
-                player.getHp() + " / " + player.getMaxHp(),
-                x + barWidth / 2 - 20,
-                y + 17);
+        gc.fillText(player.getHp() + " / " + player.getMaxHp(),
+            x + barWidth / 2 - 20, y + 17);
     }
 
     private void drawScore(GraphicsContext gc) {
         gc.setFill(Color.WHITE);
         gc.setFont(Font.font("Arial", FontWeight.BOLD, 20));
-        gc.fillText("Score: " + gameLogic.getScore(), canvas.getWidth() - 200, 40);
+        gc.fillText("Score: " + gameLogic.getScore(),
+            canvas.getWidth() - 200, 40);
     }
 
     private void drawLevel(GraphicsContext gc) {
         gc.setFill(Color.WHITE);
         gc.setFont(Font.font("Arial", FontWeight.BOLD, 20));
-        gc.fillText("Level: " + gameLogic.getLevel(), canvas.getWidth() - 200, 70);
+        gc.fillText("Level: " + gameLogic.getLevel(),
+            canvas.getWidth() - 200, 70);
     }
 
     private void drawOpponentHud(GraphicsContext gc) {
-        double barWidth = 250;
+        double barWidth  = 250;
         double barHeight = 20;
         double x = canvas.getWidth() - 300;
         double y = 100;
-
         double percent = Math.max(0, Math.min(1, opponentHp / 100.0));
 
         gc.setFill(Color.WHITE);
@@ -352,56 +317,47 @@ public class GameView extends Pane {
 
         gc.setFill(Color.WHITE);
         gc.setFont(Font.font("Arial", FontWeight.BOLD, 14));
-        gc.fillText("HP Rival: " + opponentHp, x, y + 38);
-        gc.fillText("Score Rival: " + opponentScore, x, y + 58);
-        gc.fillText("Level Rival: " + opponentLevel, x, y + 78);
+        gc.fillText("HP Rival: "    + opponentHp,    x, y + 38);
+        gc.fillText("Score Rival: " + opponentScore,  x, y + 58);
+        gc.fillText("Level Rival: " + opponentLevel,  x, y + 78);
     }
+
+    // ── Spawn ─────────────────────────────────────────────────
 
     private void spawnEnemies() {
-        long currentTime = System.currentTimeMillis();
-
-        if (currentTime - lastEnemySpawn >= getSpawnCooldown()) {
+        long now = System.currentTimeMillis();
+        if (now - lastEnemySpawn >= getSpawnCooldown()) {
             gameLogic.spawnEnemy((int) canvas.getWidth());
-            lastEnemySpawn = currentTime;
+            lastEnemySpawn = now;
         }
     }
+
+    // ── Fin de juego ──────────────────────────────────────────
 
     private void drawGameOver() {
         gc.setFill(Color.rgb(0, 0, 0, 0.7));
         gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
-
         gc.setFill(Color.RED);
         gc.setFont(Font.font("Arial", FontWeight.BOLD, 50));
-
-        gc.fillText("GAME OVER", canvas.getWidth() / 2 - 180, canvas.getHeight() / 2 - 40);
-
+        gc.fillText("GAME OVER",
+            canvas.getWidth() / 2 - 180, canvas.getHeight() / 2 - 40);
         gc.setFill(Color.WHITE);
         gc.setFont(Font.font("Arial", FontWeight.BOLD, 25));
-
-        gc.fillText(
-            "Score: " + gameLogic.getScore(),
-            canvas.getWidth() / 2 - 80,
-            canvas.getHeight() / 2 + 20
-        );
+        gc.fillText("Score: " + gameLogic.getScore(),
+            canvas.getWidth() / 2 - 80, canvas.getHeight() / 2 + 20);
     }
 
     private void drawGameWin() {
         gc.setFill(Color.rgb(0, 0, 0, 0.7));
         gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
-
         gc.setFill(Color.GREEN);
         gc.setFont(Font.font("Arial", FontWeight.BOLD, 50));
-
-        gc.fillText("YOU WIN", canvas.getWidth() / 2 - 120, canvas.getHeight() / 2 - 40);
-
+        gc.fillText("YOU WIN",
+            canvas.getWidth() / 2 - 120, canvas.getHeight() / 2 - 40);
         gc.setFill(Color.WHITE);
         gc.setFont(Font.font("Arial", FontWeight.BOLD, 25));
-
-        gc.fillText(
-            "Score: " + gameLogic.getScore(),
-            canvas.getWidth() / 2 - 80,
-            canvas.getHeight() / 2 + 20
-        );
+        gc.fillText("Score: " + gameLogic.getScore(),
+            canvas.getWidth() / 2 - 80, canvas.getHeight() / 2 + 20);
     }
 
     private void drawEndGame() {
@@ -410,33 +366,54 @@ public class GameView extends Pane {
             gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
             gc.setFill(Color.YELLOW);
             gc.setFont(Font.font("Arial", FontWeight.BOLD, 34));
-            gc.fillText("Opponent disconnected", canvas.getWidth() / 2 - 190, canvas.getHeight() / 2 - 20);
+            gc.fillText("Opponent disconnected",
+                canvas.getWidth() / 2 - 190, canvas.getHeight() / 2 - 20);
             gc.setFill(Color.WHITE);
             gc.setFont(Font.font("Arial", FontWeight.BOLD, 24));
-            gc.fillText("Session ended", canvas.getWidth() / 2 - 90, canvas.getHeight() / 2 + 20);
+            gc.fillText("Session ended",
+                canvas.getWidth() / 2 - 90, canvas.getHeight() / 2 + 20);
             return;
         }
-
         if (opponentDead && !gameEnded) {
             gc.setFill(Color.YELLOW);
             gc.setFont(Font.font("Arial", FontWeight.BOLD, 20));
-            gc.fillText(
-                "Opponent defeated! Keep playing...",
-                canvas.getWidth() / 2 - 180,
-                100
-            );
+            gc.fillText("Opponent defeated! Keep playing...",
+                canvas.getWidth() / 2 - 180, 100);
         }
-
         if (gameEnded) {
-
             gc.setFill(Color.rgb(0, 0, 0, 0.7));
             gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
-
-            if (playerWon) {
-                drawGameWin();
-            } else {
-                drawGameOver();
-            }
+            if (playerWon) drawGameWin();
+            else           drawGameOver();
         }
+    }
+
+    // ── Carga de imágenes ─────────────────────────────────────
+
+    private Image loadAvatarImage(String avatarId) {
+        if (avatarId == null || avatarId.isBlank()) avatarId = "character_1";
+        try {
+            return new Image(getClass().getResourceAsStream(
+                "/assets/characters/" + avatarId + ".png"));
+        } catch (Exception e) { return null; }
+    }
+
+    private Image loadMapImage(String mapName) {
+        if (mapName == null) return null;
+        String mapId = mapName.toLowerCase().replace(" ", "_");
+        try {
+            return new Image(getClass().getResourceAsStream(
+                "/assets/backgrounds/" + mapId + ".png"));
+        } catch (Exception e) { return null; }
+    }
+
+    // ── Helper colores fallback ───────────────────────────────
+
+    private Color typeColor(logic.AttackType type) {
+        return switch (type) {
+            case YELLOW -> Color.web("#ffd232");
+            case RED    -> Color.web("#ff3c3c");
+            case BLUE   -> Color.web("#00aaff");
+        };
     }
 }
