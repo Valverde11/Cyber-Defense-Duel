@@ -19,15 +19,17 @@ public class Bullet {
     }
 
     private void loadSprite() {
-        if (type == AttackType.YELLOW)
-            sprite = new Image(getClass().getResourceAsStream("/assets/bullets/Firewall.png"));
-
-        if (type == AttackType.RED)
-            sprite = new Image(getClass().getResourceAsStream("/assets/bullets/Antivirus.png"));
-
-        if (type == AttackType.BLUE)
-            sprite = new Image(getClass().getResourceAsStream("/assets/bullets/Crypto Shield.png"));
+    String path = switch (type) {
+        case YELLOW -> "/assets/bullets/firewall.png";
+        case RED    -> "/assets/bullets/antivirus.png";
+        case BLUE   -> "/assets/bullets/crypto_shield.png";
+    };
+    try {
+        sprite = new Image(getClass().getResourceAsStream(path));
+    } catch (Exception e) {
+        sprite = null;
     }
+}
 
     public Image getSprite() {
         return sprite;

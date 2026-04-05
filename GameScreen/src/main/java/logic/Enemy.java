@@ -21,16 +21,17 @@ public class Enemy {
     }
 
     private void loadSprite() {
-        if (type == AttackType.YELLOW)
-            sprite = new Image(getClass().getResourceAsStream("/assets/enemies/DDoS.png"));
-
-        if (type == AttackType.RED)
-            sprite = new Image(getClass().getResourceAsStream("/assets/enemies/Malware.png"));
-
-        if (type == AttackType.BLUE)
-            sprite = new Image(getClass().getResourceAsStream("/assets/enemies/Credential Attack.png"));
-        }
-
+    String path = switch (type) {
+        case YELLOW -> "/assets/enemies/ddos.png";
+        case RED    -> "/assets/enemies/malware.png";
+        case BLUE   -> "/assets/enemies/credential_attack.png";
+    };
+    try {
+        sprite = new Image(getClass().getResourceAsStream(path));
+    } catch (Exception e) {
+        sprite = null;
+    }
+}
     public Image getSprite() {
         return sprite;
     }
