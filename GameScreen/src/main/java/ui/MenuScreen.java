@@ -15,6 +15,7 @@ import javafx.scene.text.*;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import logic.GameConfig;
+import persistence.DatabaseManager;
 import java.util.Arrays;
 import java.util.List;
 
@@ -22,14 +23,11 @@ public class MenuScreen {
 
     private static final String DEFAULT_AVATAR = "character_1";
     private static final List<String> AVATAR_IDS = Arrays.asList(
-        "character_1", "character_2", "character_3"
-    );
+            "character_1", "character_2", "character_3");
     private static final List<String> MAP_IDS = Arrays.asList(
-        "data_center_dojo", "packet_bay_carnival"
-    );
+            "data_center_dojo", "packet_bay_carnival");
     private static final List<String> MAP_NAMES = Arrays.asList(
-        "Data Center Dojo", "Packet Bay Carnival"
-    );
+            "Data Center Dojo", "Packet Bay Carnival");
 
     private static String getAvatarName(String avatarId) {
         return switch (avatarId) {
@@ -40,28 +38,34 @@ public class MenuScreen {
         };
     }
 
-    private final Stage           stage;
-    private final String          username;
+    private final Stage stage;
+    private final String username;
     private final ServerConnection connection;
-    private String                selectedAvatar;
-    private String                selectedMap;
-    private GameConfig            pendingConfig;
-    private boolean               matchFoundReceived;
+    private final DatabaseManager db; // ← agregado
+    private String selectedAvatar;
+    private String selectedMap;
+    private GameConfig pendingConfig;
+    private boolean matchFoundReceived;
 
-    // Preview del mapa en el menú principal
     private ImageView mapPreview;
-    private Label     mapNameLabel;
+    private Label mapNameLabel;
 
-    public MenuScreen(Stage stage, String username, ServerConnection connection, String initialAvatar) {
-        this.stage          = stage;
-        this.username       = username;
-        this.connection     = connection;
+    // ── Constructores ────────────────────────────────────
+
+    public MenuScreen(Stage stage, String username, ServerConnection connection,
+            String initialAvatar, DatabaseManager db) {
+        this.stage = stage;
+        this.username = username;
+        this.connection = connection;
+        this.db = db;
         this.selectedAvatar = (initialAvatar == null || initialAvatar.isBlank())
-            ? DEFAULT_AVATAR : initialAvatar;
+                ? DEFAULT_AVATAR
+                : initialAvatar;
     }
 
-    public MenuScreen(Stage stage, String username, ServerConnection connection) {
-        this(stage, username, connection, DEFAULT_AVATAR);
+    public MenuScreen(Stage stage, String username,
+            ServerConnection connection, DatabaseManager db) {
+        this(stage, username, connection, DEFAULT_AVATAR, db);
     }
 
     public void show() {
@@ -76,23 +80,20 @@ public class MenuScreen {
         welcome.setFill(Color.web("#445566"));
 
         // ── Botones ──────────────────────────────────────
-        Button playBtn   = cyberButton("▶  JUGAR",          "#00dcff");
-        Button avatarBtn = cyberButton("◈  AVATAR",         "#ffaa00");
-        Button mapBtn    = cyberButton("⬡  MAPA",           "#8888ff");
-        Button logoutBtn = cyberButton("✕  CERRAR SESIÓN",  "#ff4444");
+        Button playBtn = cyberButton("▶  JUGAR", "#00dcff");
+        Button avatarBtn = cyberButton("◈  AVATAR", "#ffaa00");
+        Button mapBtn = cyberButton("⬡  MAPA", "#8888ff");
+        Button logoutBtn = cyberButton("✕  CERRAR SESIÓN", "#ff4444");
 
         Label avatarStatusLabel = infoLabel("Avatar: " + getAvatarName(selectedAvatar));
-        Label statusLabel       = infoLabel("Selecciona avatar y mapa para jugar");
+        Label statusLabel = infoLabel("Selecciona avatar y mapa para jugar");
 
         // ── Preview del mapa ─────────────────────────────
         mapPreview = new ImageView();
         mapPreview.setFitWidth(320);
         mapPreview.setFitHeight(180);
         mapPreview.setPreserveRatio(false);
-        mapPreview.setStyle(
-            "-fx-border-color: #223344;" +
-            "-fx-border-width: 1;"
-        );
+        mapPreview.setStyle("-fx-border-color: #223344; -fx-border-width: 1;");
 
         mapNameLabel = new Label("Sin mapa seleccionado");
         mapNameLabel.setFont(Font.font("Courier New", 11));
@@ -102,35 +103,33 @@ public class MenuScreen {
         previewBox.setAlignment(Pos.CENTER);
         previewBox.setPadding(new Insets(10));
         previewBox.setStyle(
-            "-fx-background-color: #08091a;" +
-            "-fx-border-color: #223344;" +
-            "-fx-border-width: 1;" +
-            "-fx-border-radius: 8;" +
-            "-fx-background-radius: 8;"
-        );
+                "-fx-background-color: #08091a;" +
+                        "-fx-border-color: #223344;" +
+                        "-fx-border-width: 1;" +
+                        "-fx-border-radius: 8;" +
+                        "-fx-background-radius: 8;");
 
         // ── Acciones ─────────────────────────────────────
         initServerHandlers(statusLabel);
         connection.selectAvatar(selectedAvatar);
 
-        playBtn.setOnAction(e   -> joinQueue(statusLabel));
+        playBtn.setOnAction(e -> joinQueue(statusLabel));
         avatarBtn.setOnAction(e -> chooseAvatar(statusLabel, avatarStatusLabel));
-        mapBtn.setOnAction(e    -> chooseMap(statusLabel));
+        mapBtn.setOnAction(e -> chooseMap(statusLabel));
         logoutBtn.setOnAction(e -> goToLogin());
 
-        // ── Layout izquierdo: botones ────────────────────
+        // ── Layout izquierdo ─────────────────────────────
         VBox leftPanel = new VBox(16,
-            title, welcome,
-            separator(),
-            playBtn, avatarBtn, mapBtn, logoutBtn,
-            separator(),
-            avatarStatusLabel, statusLabel
-        );
+                title, welcome,
+                separator(),
+                playBtn, avatarBtn, mapBtn, logoutBtn,
+                separator(),
+                avatarStatusLabel, statusLabel);
         leftPanel.setAlignment(Pos.CENTER_LEFT);
         leftPanel.setPadding(new Insets(50, 40, 50, 60));
         leftPanel.setPrefWidth(440);
 
-        // ── Layout derecho: preview ──────────────────────
+        // ── Layout derecho ───────────────────────────────
         VBox rightPanel = new VBox(20);
         rightPanel.setAlignment(Pos.CENTER);
         rightPanel.setPadding(new Insets(50, 60, 50, 40));
@@ -146,7 +145,6 @@ public class MenuScreen {
         root.setAlignment(Pos.CENTER);
         root.setStyle("-fx-background-color: #04060e;");
 
-        // Línea divisoria vertical
         Separator divider = new Separator(javafx.geometry.Orientation.VERTICAL);
         divider.setStyle("-fx-background-color: #112233;");
         root.getChildren().add(1, divider);
@@ -157,7 +155,7 @@ public class MenuScreen {
         stage.setFullScreen(true);
     }
 
-    // ── Selección de mapa con preview ────────────────────
+    // ── Selección de mapa ────────────────────────────────
 
     private void chooseMap(Label statusLabel) {
         Stage dialog = new Stage();
@@ -173,11 +171,9 @@ public class MenuScreen {
         mapsBox.setAlignment(Pos.CENTER);
 
         for (int i = 0; i < MAP_IDS.size(); i++) {
-            String mapId   = MAP_IDS.get(i);
+            String mapId = MAP_IDS.get(i);
             String mapName = MAP_NAMES.get(i);
-            final int idx  = i;
 
-            // Preview imagen
             ImageView preview = new ImageView(loadMapImage(mapId));
             preview.setFitWidth(280);
             preview.setFitHeight(160);
@@ -196,14 +192,12 @@ public class MenuScreen {
                 connection.selectMap(mapName);
                 statusLabel.setText("Mapa elegido: " + mapName);
                 statusLabel.setTextFill(Color.web("#9fb3c8"));
-                // Actualizar preview en menú principal
                 mapPreview.setImage(loadMapImage(mapId));
                 mapNameLabel.setText(mapName);
                 dialog.close();
             });
             card.setOnMouseEntered(e -> card.setStyle(mapCardStyle(true)));
-            card.setOnMouseExited(e  -> card.setStyle(mapCardStyle(mapName.equals(selectedMap))));
-
+            card.setOnMouseExited(e -> card.setStyle(mapCardStyle(mapName.equals(selectedMap))));
             mapsBox.getChildren().add(card);
         }
 
@@ -221,14 +215,14 @@ public class MenuScreen {
 
     private String mapCardStyle(boolean selected) {
         String border = selected ? "#00dcff" : "#223344";
-        String bg     = selected ? "#0a1a2e" : "#08091a";
-        int    width  = selected ? 2 : 1;
+        String bg = selected ? "#0a1a2e" : "#08091a";
+        int width = selected ? 2 : 1;
         return "-fx-background-color: " + bg + ";" +
-               "-fx-border-color: " + border + ";" +
-               "-fx-border-width: " + width + ";" +
-               "-fx-border-radius: 8;" +
-               "-fx-background-radius: 8;" +
-               "-fx-cursor: hand;";
+                "-fx-border-color: " + border + ";" +
+                "-fx-border-width: " + width + ";" +
+                "-fx-border-radius: 8;" +
+                "-fx-background-radius: 8;" +
+                "-fx-cursor: hand;";
     }
 
     // ── Selección de avatar ──────────────────────────────
@@ -296,15 +290,14 @@ public class MenuScreen {
 
     private String tileStyle(boolean selected) {
         return selected
-            ? "-fx-background-color: #0a1a2e; -fx-border-color: #00dcff; -fx-border-width: 2; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 10; -fx-cursor: hand;"
-            : "-fx-background-color: #08091a; -fx-border-color: #223344; -fx-border-width: 1; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 10; -fx-cursor: hand;";
+                ? "-fx-background-color: #0a1a2e; -fx-border-color: #00dcff; -fx-border-width: 2; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 10; -fx-cursor: hand;"
+                : "-fx-background-color: #08091a; -fx-border-color: #223344; -fx-border-width: 1; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 10; -fx-cursor: hand;";
     }
 
     // ── Red ──────────────────────────────────────────────
 
     private void initServerHandlers(Label statusLabel) {
-        connection.setOnMessage(msg -> Platform.runLater(() ->
-            handleServerMessage(msg, statusLabel)));
+        connection.setOnMessage(msg -> Platform.runLater(() -> handleServerMessage(msg, statusLabel)));
         connection.setOnError(err -> Platform.runLater(() -> {
             statusLabel.setTextFill(Color.web("#ff4444"));
             statusLabel.setText(err);
@@ -357,12 +350,14 @@ public class MenuScreen {
     }
 
     private void tryStartGame() {
-        if (!matchFoundReceived || pendingConfig == null) return;
+        if (!matchFoundReceived || pendingConfig == null)
+            return;
         goToGame(pendingConfig);
     }
 
     private void goToGame(GameConfig config) {
-        GameView gameView = new GameView(config, connection, selectedAvatar, selectedMap);
+        GameView gameView = new GameView(config, connection,
+                selectedAvatar, selectedMap, username, db);
         Scene scene = new Scene(gameView, 1280, 720);
         stage.setScene(scene);
         stage.setTitle("Cyber Defense Duel");
@@ -385,17 +380,17 @@ public class MenuScreen {
 
     private GameConfig parseConfig(JsonObject msg) {
         GameConfig config = new GameConfig();
-        config.initialHp               = msg.get("initialHp").getAsInt();
-        config.baseSpawnRate           = msg.get("baseSpawnRate").getAsDouble();
-        config.baseAttackSpeed         = msg.get("baseAttackSpeed").getAsDouble();
-        config.scorePerKill            = msg.get("scorePerKill").getAsInt();
-        config.difficultyStepScore     = msg.get("difficultyStepScore").getAsInt();
+        config.initialHp = msg.get("initialHp").getAsInt();
+        config.baseSpawnRate = msg.get("baseSpawnRate").getAsDouble();
+        config.baseAttackSpeed = msg.get("baseAttackSpeed").getAsDouble();
+        config.scorePerKill = msg.get("scorePerKill").getAsInt();
+        config.difficultyStepScore = msg.get("difficultyStepScore").getAsInt();
         config.spawnMultiplierPerLevel = msg.get("spawnMultiplierPerLevel").getAsDouble();
-        config.speedAddPerLevel        = msg.get("speedAddPerLevel").getAsDouble();
+        config.speedAddPerLevel = msg.get("speedAddPerLevel").getAsDouble();
         JsonObject damage = msg.getAsJsonObject("damageByType");
         config.damageYellow = damage.get("DDOS").getAsInt();
-        config.damageRed    = damage.get("MALWARE").getAsInt();
-        config.damageBlue   = damage.get("CRED").getAsInt();
+        config.damageRed = damage.get("MALWARE").getAsInt();
+        config.damageBlue = damage.get("CRED").getAsInt();
         return config;
     }
 
@@ -404,15 +399,19 @@ public class MenuScreen {
     private Image loadAvatarImage(String avatarId) {
         try {
             return new Image(getClass().getResourceAsStream(
-                "/assets/characters/" + avatarId + ".png"));
-        } catch (Exception e) { return null; }
+                    "/assets/characters/" + avatarId + ".png"));
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private Image loadMapImage(String mapId) {
         try {
             return new Image(getClass().getResourceAsStream(
-                "/assets/backgrounds/" + mapId + ".png"));
-        } catch (Exception e) { return null; }
+                    "/assets/backgrounds/" + mapId + ".png"));
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     // ── Helpers de estilo ────────────────────────────────
@@ -423,13 +422,13 @@ public class MenuScreen {
         btn.setTextFill(Color.WHITE);
         btn.setPrefWidth(220);
         btn.setPrefHeight(44);
-        String base  = "-fx-background-color: transparent; -fx-border-color: " + color +
-                       "; -fx-border-width: 1; -fx-border-radius: 4; -fx-background-radius: 4; -fx-cursor: hand;";
+        String base = "-fx-background-color: transparent; -fx-border-color: " + color +
+                "; -fx-border-width: 1; -fx-border-radius: 4; -fx-background-radius: 4; -fx-cursor: hand;";
         String hover = "-fx-background-color: " + color + "33; -fx-border-color: " + color +
-                       "; -fx-border-width: 1; -fx-border-radius: 4; -fx-background-radius: 4; -fx-cursor: hand;";
+                "; -fx-border-width: 1; -fx-border-radius: 4; -fx-background-radius: 4; -fx-cursor: hand;";
         btn.setStyle(base);
         btn.setOnMouseEntered(e -> btn.setStyle(hover));
-        btn.setOnMouseExited(e  -> btn.setStyle(base));
+        btn.setOnMouseExited(e -> btn.setStyle(base));
         return btn;
     }
 

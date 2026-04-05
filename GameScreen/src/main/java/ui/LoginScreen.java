@@ -1,32 +1,23 @@
 package ui;
 
 import com.google.gson.JsonObject;
-
 import client.ServerConnection;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.PasswordField;
-import javafx.scene.control.Separator;
-import javafx.scene.control.TextField;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
-import javafx.scene.text.Text;
+import javafx.scene.text.*;
 import javafx.stage.Stage;
+import persistence.DatabaseManager;
 
 public class LoginScreen {
 
     private final Stage stage;
-
-    //si no funciona la IP revisar en cmd con ipconfig (IPv4)
     private final ServerConnection connection;
+    private final DatabaseManager db = new DatabaseManager(); // ← agregado
 
     public LoginScreen(Stage stage) {
         this.stage = stage;
@@ -38,12 +29,13 @@ public class LoginScreen {
         this.connection = connection;
     }
 
-
+    // ── Navegación ────────────────────────────────────────────
 
     private void goToMenu(String username, String initialAvatar) {
-        MenuScreen menu = new MenuScreen(stage, username, connection, initialAvatar);
-        menu.show();
+        new MenuScreen(stage, username, connection, initialAvatar, db).show();
     }
+
+    // ── Conexión y mensajes del servidor ─────────────────────
 
     private void initConnection(Label status) {
         connection.setOnMessage(msg -> Platform.runLater(() -> handleServerMessage(msg, status)));
@@ -51,7 +43,6 @@ public class LoginScreen {
             status.setTextFill(Color.web("#ff4444"));
             status.setText(err);
         }));
-
         try {
             connection.connect();
             status.setTextFill(Color.web("#00c85a"));
@@ -64,40 +55,37 @@ public class LoginScreen {
 
     private void handleServerMessage(JsonObject msg, Label status) {
         String type = msg.get("type").getAsString();
-
         switch (type) {
             case "LOGIN_OK":
                 String username = msg.get("username").getAsString();
                 String avatar = "character_1";
                 if (msg.has("stats") && msg.getAsJsonObject("stats").has("avatar")) {
                     String saved = msg.getAsJsonObject("stats").get("avatar").getAsString();
-                    if (saved != null && !saved.isBlank()) {
+                    if (saved != null && !saved.isBlank())
                         avatar = saved;
-                    }
                 }
                 goToMenu(username, avatar);
                 break;
-
             case "LOGIN_FAIL":
             case "REGISTER_FAIL":
             case "ERROR":
                 status.setTextFill(Color.web("#ff4444"));
                 status.setText(msg.get("message").getAsString());
                 break;
-
             case "REGISTER_OK":
                 status.setTextFill(Color.web("#00c85a"));
                 status.setText(msg.get("message").getAsString());
                 break;
-
             default:
                 break;
         }
     }
 
+    // ── UI ────────────────────────────────────────────────────
+
     public void show() {
 
-        // ── Campos ──────────────────────────────────────────
+        // ── Campos ───────────────────────────────────────
         TextField userField = new TextField();
         PasswordField passField = new PasswordField();
         Label status = new Label();
@@ -110,7 +98,7 @@ public class LoginScreen {
 
         initConnection(status);
 
-        // ── Botones ──────────────────────────────────────────
+        // ── Botones ──────────────────────────────────────
         Button loginBtn = cyberButton("INICIAR SESIÓN", "#00dcff");
         Button registerBtn = cyberButton("REGISTRAR", "#00c85a");
 
@@ -136,7 +124,7 @@ public class LoginScreen {
             connection.register(user, pass);
         });
 
-        // ── Título ───────────────────────────────────────────
+        // ── Título ───────────────────────────────────────
         Text title = new Text("CYBER DEFENSE DUEL");
         title.setFont(Font.font("Courier New", FontWeight.BOLD, 32));
         title.setFill(Color.web("#00dcff"));
@@ -145,25 +133,19 @@ public class LoginScreen {
         subtitle.setFont(Font.font("Courier New", 13));
         subtitle.setFill(Color.web("#445566"));
 
-        // ── Separador ────────────────────────────────────────
         Separator sep = new Separator();
         sep.setStyle("-fx-background-color: #004488;");
         sep.setPrefWidth(340);
 
-        // ── Tarjeta central ──────────────────────────────────
+        // ── Tarjeta central ──────────────────────────────
         HBox buttons = new HBox(10, loginBtn, registerBtn);
         buttons.setAlignment(Pos.CENTER_LEFT);
 
         VBox card = new VBox(12,
-                title,
-                subtitle,
-                sep,
-                fieldLabel("USUARIO"),
-                userField,
-                fieldLabel("CONTRASEÑA"),
-                passField,
-                buttons,
-                status);
+                title, subtitle, sep,
+                fieldLabel("USUARIO"), userField,
+                fieldLabel("CONTRASEÑA"), passField,
+                buttons, status);
         card.setAlignment(Pos.CENTER_LEFT);
         card.setPadding(new Insets(44));
         card.setMaxWidth(440);
@@ -174,7 +156,7 @@ public class LoginScreen {
                         "-fx-border-radius: 10;" +
                         "-fx-background-radius: 10;");
 
-        // ── Fondo pantalla completa ───────────────────────────
+        // ── Fondo ────────────────────────────────────────
         StackPane root = new StackPane(card);
         root.setAlignment(Pos.CENTER);
         root.setStyle("-fx-background-color: #04060e;");
@@ -217,25 +199,21 @@ public class LoginScreen {
         btn.setTextFill(Color.WHITE);
         btn.setPrefWidth(160);
         btn.setPrefHeight(42);
-
         String base = "-fx-background-color: transparent;" +
                 "-fx-border-color: " + color + ";" +
                 "-fx-border-width: 1;" +
                 "-fx-border-radius: 4;" +
                 "-fx-background-radius: 4;" +
                 "-fx-cursor: hand;";
-
         String hover = "-fx-background-color: " + color + "33;" +
                 "-fx-border-color: " + color + ";" +
                 "-fx-border-width: 1;" +
                 "-fx-border-radius: 4;" +
                 "-fx-background-radius: 4;" +
                 "-fx-cursor: hand;";
-
         btn.setStyle(base);
         btn.setOnMouseEntered(e -> btn.setStyle(hover));
         btn.setOnMouseExited(e -> btn.setStyle(base));
         return btn;
     }
-
 }

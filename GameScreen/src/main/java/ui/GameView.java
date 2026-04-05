@@ -1,7 +1,6 @@
 package ui;
 
 import com.google.gson.JsonObject;
-
 import audio.AudioManager;
 import client.ServerConnection;
 import javafx.animation.AnimationTimer;
@@ -31,6 +30,7 @@ public class GameView extends Pane {
     private GameConfig config;
     private final ServerConnection connection;
     private final Image playerImage;
+    private Image backgroundImage; // ← campo agregado
 
     private final DatabaseManager db;
     private final String username;
@@ -56,11 +56,14 @@ public class GameView extends Pane {
     private int opponentLevel = 0;
     private String opponentUsername = "Opponent";
 
-    public GameView(GameConfig config, ServerConnection connection, String selectedAvatar, String username,
-            DatabaseManager db) {
+    // ── Constructor actualizado con selectedMap ────────────────
+    public GameView(GameConfig config, ServerConnection connection,
+            String selectedAvatar, String selectedMap,
+            String username, DatabaseManager db) {
         this.config = config;
         this.connection = connection;
         this.playerImage = loadAvatarImage(selectedAvatar);
+        this.backgroundImage = loadMapImage(selectedMap); // ← carga el mapa
         this.username = username;
         this.db = db;
         canvas = new Canvas(1280, 720);
@@ -209,13 +212,10 @@ public class GameView extends Pane {
         drawEndGame();
     }
 
-    // ── Fondo con imagen del mapa ─────────────────────────────
-
     private void drawBackground() {
         if (backgroundImage != null) {
             gc.drawImage(backgroundImage, 0, 0,
                     canvas.getWidth(), canvas.getHeight());
-            // Overlay oscuro para que se vean los elementos del juego
             gc.setFill(Color.color(0, 0, 0, 0.45));
             gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
         } else {
