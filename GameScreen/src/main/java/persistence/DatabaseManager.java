@@ -85,6 +85,31 @@ public class DatabaseManager {
         }
     }
 
+    public void updateStats(String username, int score, int y, int r, int b) {
+        UserRecord u = findUser(username);
+        if (u != null) {
+            u.totalScore += score;
+
+            u.xpYellow += y;
+            u.xpRed += r;
+            u.xpBlue += b;
+
+            if (score > u.highScore) {
+                u.highScore = score;
+            }
+
+            save();
+        }
+    }
+
+    public void registerGame(String username) {
+        UserRecord u = findUser(username);
+        if (u != null) {
+            u.gamesPlayed++;
+            save();
+        }
+    }
+
     private void load() {
         try {
             String content = new String(Files.readAllBytes(Paths.get(DB_FILE)));
@@ -101,10 +126,20 @@ public class DatabaseManager {
                 String passHash = SimpleJson.readString(entry, "passwordHash");
                 String avatar = SimpleJson.readString(entry, "avatar");
                 int highScore = SimpleJson.readInt(entry, "highScore");
+                int totalScore = SimpleJson.readInt(entry, "totalScore");
+                int gamesPlayed = SimpleJson.readInt(entry, "gamesPlayed");
+                int xpYellow = SimpleJson.readInt(entry, "xpYellow");
+                int xpRed = SimpleJson.readInt(entry, "xpRed");
+                int xpBlue = SimpleJson.readInt(entry, "xpBlue");
                 if (!username.isEmpty() && userCount < users.length) {
                     UserRecord u = new UserRecord(username, passHash);
                     u.avatar = avatar;
                     u.highScore = highScore;
+                    u.totalScore = totalScore;
+                    u.gamesPlayed = gamesPlayed;
+                    u.xpYellow = xpYellow;
+                    u.xpRed = xpRed;
+                    u.xpBlue = xpBlue;
                     users[userCount++] = u;
                 }
             }

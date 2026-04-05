@@ -1,15 +1,24 @@
 package ui;
 
-import client.ServerConnection;
 import com.google.gson.JsonObject;
+
+import client.ServerConnection;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.Separator;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.text.*;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
 public class LoginScreen {
@@ -21,7 +30,7 @@ public class LoginScreen {
 
     public LoginScreen(Stage stage) {
         this.stage = stage;
-        this.connection = new ServerConnection("192.168.0.115", 5000);
+        this.connection = new ServerConnection("localhost", 5000);
     }
 
     public LoginScreen(Stage stage, ServerConnection connection) {
@@ -31,8 +40,8 @@ public class LoginScreen {
 
 
 
-    private void goToMenu(String username) {
-        MenuScreen menu = new MenuScreen(stage, username, connection);
+    private void goToMenu(String username, String initialAvatar) {
+        MenuScreen menu = new MenuScreen(stage, username, connection, initialAvatar);
         menu.show();
     }
 
@@ -59,7 +68,14 @@ public class LoginScreen {
         switch (type) {
             case "LOGIN_OK":
                 String username = msg.get("username").getAsString();
-                goToMenu(username);
+                String avatar = "character_1";
+                if (msg.has("stats") && msg.getAsJsonObject("stats").has("avatar")) {
+                    String saved = msg.getAsJsonObject("stats").get("avatar").getAsString();
+                    if (saved != null && !saved.isBlank()) {
+                        avatar = saved;
+                    }
+                }
+                goToMenu(username, avatar);
                 break;
 
             case "LOGIN_FAIL":

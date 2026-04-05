@@ -8,6 +8,7 @@ import audio.AudioManager;
 import com.google.gson.JsonObject;
 import javafx.animation.AnimationTimer;
 import javafx.application.Platform;
+import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
@@ -16,6 +17,7 @@ import logic.Bullet;
 import logic.Enemy;
 import logic.GameConfig;
 import logic.Player;
+import persistence.DatabaseManager;
 
 public class GameView extends Pane {
 
@@ -27,6 +29,10 @@ public class GameView extends Pane {
     private boolean playerPositioned = false;
     private GameConfig config;
     private final ServerConnection connection;
+    private final Image playerImage;
+
+    private final DatabaseManager db;
+    private final String username;
 
     private long lastEnemySpawn = 0;
     private long lastStatePush = 0;
@@ -48,9 +54,12 @@ public class GameView extends Pane {
     private int opponentLevel = 0;
     private String opponentUsername = "Opponent";
 
-    public GameView(GameConfig config, ServerConnection connection) {
+    public GameView(GameConfig config, ServerConnection connection, String selectedAvatar, String username, DatabaseManager db) {
         this.config = config;
         this.connection = connection;
+        this.playerImage = loadAvatarImage(selectedAvatar);
+        this.username = username;
+        this.db = db;
         canvas = new Canvas(1280, 720);
         gc = canvas.getGraphicsContext2D();
         gameLogic = new GameLogic(config);
@@ -159,6 +168,13 @@ public class GameView extends Pane {
 
             if (!deadNotified) {
                 connection.playerDead(gameLogic.getScore());
+                db.updateStats(
+                        username,
+                        gameLogic.getScore(),
+                        gameLogic.getYellowKills(),
+                        gameLogic.getRedKills(),
+                        gameLogic.getBlueKills()
+                );
                 deadNotified = true;
             }
         }
@@ -209,17 +225,24 @@ public class GameView extends Pane {
     private void drawPlayer() {
         Player player = gameLogic.getPlayer();
 
-        if (player.isInvulnerable()) {
-            gc.setFill(Color.YELLOW);
+        if (playerImage != null) {
+            gc.drawImage(playerImage,
+                    player.getX(),
+                    player.getY(),
+                    player.getWidth(),
+                    player.getHeight());
         } else {
-            gc.setFill(Color.GREEN);
+            if (player.isInvulnerable()) {
+                gc.setFill(Color.YELLOW);
+            } else {
+                gc.setFill(Color.GREEN);
+            }
+            gc.fillRect(
+                    player.getX(),
+                    player.getY(),
+                    player.getWidth(),
+                    player.getHeight());
         }
-
-        gc.fillRect(
-                player.getX(),
-                player.getY(),
-                player.getWidth(),
-                player.getHeight());
     }
 
     private void drawBullets() {
@@ -249,6 +272,17 @@ public class GameView extends Pane {
                     enemy.getY(),
                     enemy.getWidth(),
                     enemy.getHeight());
+        }
+    }
+
+    private Image loadAvatarImage(String avatarId) {
+        if (avatarId == null || avatarId.isBlank()) {
+            avatarId = "character_1";
+        }
+        try {
+            return new Image(getClass().getResourceAsStream("/assets/characters/" + avatarId + ".png"));
+        } catch (Exception e) {
+            return null;
         }
     }
 
