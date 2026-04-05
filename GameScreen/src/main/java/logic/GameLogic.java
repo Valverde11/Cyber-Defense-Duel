@@ -13,6 +13,9 @@ public class GameLogic {
     private final long shootCooldown = 300;
     private int lastLevel = 0;
     private int score = 0;
+    private int yellowKills = 0;
+    private int redKills = 0;
+    private int blueKills = 0;
 
     public GameLogic(GameConfig config) {
         this.config = config;
@@ -129,6 +132,17 @@ public class GameLogic {
                         bullet.getY() + bullet.getHeight() > enemy.getY();
 
                 if (collision && bullet.getType() == enemy.getType()) {
+                    switch (enemy.getType()) {
+                        case YELLOW:
+                            yellowKills++;
+                            break;
+                        case RED:
+                            redKills++;
+                            break;
+                        case BLUE:
+                            blueKills++;
+                            break;
+                    }
                     removeEnemy(j);
                     removeBullet(i);
                     score += config.scorePerKill;
@@ -230,5 +244,14 @@ public class GameLogic {
 
     public int getLevel() {
         return score / config.difficultyStepScore;
+    }
+    public int getYellowKills() {
+        return yellowKills;
+    }
+    public int getRedKills() {
+        return redKills;
+    }
+    public int getBlueKills() {
+        return blueKills;
     }
 }

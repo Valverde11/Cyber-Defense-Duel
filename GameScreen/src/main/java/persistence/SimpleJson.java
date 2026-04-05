@@ -6,7 +6,13 @@ public class SimpleJson {
         return "{\"username\":\"" + esc(u.username) + "\""
                 + ",\"passwordHash\":\"" + esc(u.passwordHash) + "\""
                 + ",\"avatar\":\"" + esc(u.avatar) + "\""
-                + ",\"highScore\":" + u.highScore + "}";
+                + ",\"highScore\":" + u.highScore
+                + ",\"totalScore\":" + u.totalScore
+                + ",\"gamesPlayed\":" + u.gamesPlayed
+                + ",\"xpYellow\":" + u.xpYellow
+                + ",\"xpRed\":" + u.xpRed
+                + ",\"xpBlue\":" + u.xpBlue
+                + "}";
     }
 
     // String de un Json //
