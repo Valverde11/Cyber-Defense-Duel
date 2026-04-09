@@ -133,6 +133,10 @@ class ClientHandler implements Runnable {
  
         this.username = user;
         System.out.println("[Servidor] Login exitoso: " + username);
+        System.out.println("  Partidas jugadas: " + record.gamesPlayed);
+        System.out.println("  Kills Yellow: " + record.xpYellow);
+        System.out.println("  Kills Red: " + record.xpRed);
+        System.out.println("  Kills Blue: " + record.xpBlue);
  
         // Respuesta exitosa + estadisticas del jugador
         JsonObject resp = new JsonObject();
@@ -142,6 +146,10 @@ class ClientHandler implements Runnable {
         JsonObject stats = new JsonObject();
         stats.addProperty("avatar", record.avatar);
         stats.addProperty("highScore", record.highScore);
+        stats.addProperty("gamesPlayed", record.gamesPlayed);
+        stats.addProperty("xpYellow", record.xpYellow);
+        stats.addProperty("xpRed", record.xpRed);
+        stats.addProperty("xpBlue", record.xpBlue);
         resp.add("stats", stats);
         send(resp.toString());
     }
@@ -188,6 +196,13 @@ class ClientHandler implements Runnable {
         if (currentSession == null) return;
  
         int finalScore = json.has("score") ? json.get("score").getAsInt() : 0;
+        int y = json.has("yellowKills") ? json.get("yellowKills").getAsInt() : 0;
+        int r = json.has("redKills") ? json.get("redKills").getAsInt() : 0;
+        int b = json.has("blueKills") ? json.get("blueKills").getAsInt() : 0;
+
+        if (username != null) {
+            db.updateStats(username, finalScore, y, r, b);
+        }
  
         // Notificar al oponente
         JsonObject notif = new JsonObject();

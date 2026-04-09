@@ -89,6 +89,7 @@ public class DatabaseManager {
         UserRecord u = findUser(username);
         if (u != null) {
             u.totalScore += score;
+            u.gamesPlayed += 1;
 
             u.xpYellow += y;
             u.xpRed += r;

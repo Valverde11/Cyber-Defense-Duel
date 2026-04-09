@@ -105,10 +105,13 @@ public class ServerConnection {
         send(o);
     }
 
-    public void playerDead(int finalScore) {
+    public void playerDead(int finalScore, int yellow, int red, int blue) {
         JsonObject o = new JsonObject();
         o.addProperty("type", "PLAYER_DEAD");
         o.addProperty("score", finalScore);
+        o.addProperty("yellowKills", yellow);
+        o.addProperty("redKills", red);
+        o.addProperty("blueKills", blue);
         send(o);
     }
 

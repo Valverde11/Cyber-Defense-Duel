@@ -167,13 +167,12 @@ public class GameView extends Pane {
             AudioManager.stopMusic();
             AudioManager.playSound("/sounds/smb_gameover.wav");
             if (!deadNotified) {
-                connection.playerDead(gameLogic.getScore());
-                db.updateStats(
-                        username,
-                        gameLogic.getScore(),
-                        gameLogic.getYellowKills(),
-                        gameLogic.getRedKills(),
-                        gameLogic.getBlueKills());
+                connection.playerDead(
+                    gameLogic.getScore(),
+                    gameLogic.getYellowKills(),
+                    gameLogic.getRedKills(),
+                    gameLogic.getBlueKills()
+                );
                 deadNotified = true;
             }
         }
