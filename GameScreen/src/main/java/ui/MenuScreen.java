@@ -1,6 +1,7 @@
 package ui;
 
 import com.google.gson.JsonObject;
+
 import client.ServerConnection;
 import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
@@ -333,11 +334,11 @@ public class MenuScreen {
         countdown.setFont(Font.font("Courier New", FontWeight.BOLD, 80));
         countdown.setTextFill(Color.web("#00dcff"));
 
+        // Cuenta regresiva solo visual
         Timeline ct = new Timeline(
             new KeyFrame(Duration.seconds(0), e -> countdown.setText("3")),
             new KeyFrame(Duration.seconds(1), e -> countdown.setText("2")),
-            new KeyFrame(Duration.seconds(2), e -> countdown.setText("1")),
-            new KeyFrame(Duration.seconds(3), e -> tryStartGame())
+            new KeyFrame(Duration.seconds(2), e -> countdown.setText("1"))
         );
         ct.setCycleCount(1);
         ct.play();
@@ -379,17 +380,13 @@ public class MenuScreen {
             case "MATCH_FOUND" -> {
                 matchFoundReceived = true;
                 showMatchFoundScreen();
-                // Si CONFIG ya llegó antes, arrancar ahora
-                if (pendingConfig != null) {
-                    tryStartGame();
-                }
             }
             case "CONFIG" -> {
                 pendingConfig = parseConfig(msg);
-                // Si MATCH_FOUND ya llegó antes, arrancar ahora
-                if (matchFoundReceived) {
-                    tryStartGame();
-                }
+                // Esperar 3 segundos para que el countdown termine y arrancar
+                PauseTransition pause = new PauseTransition(Duration.seconds(3));
+                pause.setOnFinished(e -> goToGame(pendingConfig));
+                pause.play();
             }
             case "ERROR" -> {
                 if (statusLabel != null) {
@@ -419,11 +416,6 @@ public class MenuScreen {
         PauseTransition pause = new PauseTransition(Duration.millis(100));
         pause.setOnFinished(e -> connection.joinQueue());
         pause.play();
-    }
-
-    private void tryStartGame() {
-        if (!matchFoundReceived || pendingConfig == null) return;
-        goToGame(pendingConfig);
     }
 
     private void goToGame(GameConfig config) {
