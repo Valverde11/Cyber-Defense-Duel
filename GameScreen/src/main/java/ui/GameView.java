@@ -12,6 +12,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import javafx.stage.Stage;
 import logic.Bullet;
 import logic.Enemy;
 import logic.GameConfig;
@@ -50,22 +51,27 @@ public class GameView extends Pane {
     private boolean opponentDead = false;
     private boolean opponentDisconnected = false;
     private boolean deadNotified = false;
+    private boolean playerIsDead = false;
+    private boolean showFinalResult = false;
 
     private int opponentHp;
     private int opponentScore = 0;
     private int opponentLevel = 0;
     private String opponentUsername = "Opponent";
+    
+    private final Stage stage;
 
     // ── Constructor actualizado con selectedMap ────────────────
     public GameView(GameConfig config, ServerConnection connection,
             String selectedAvatar, String selectedMap,
-            String username, DatabaseManager db) {
+            String username, DatabaseManager db, Stage stage) {
         this.config = config;
         this.connection = connection;
         this.playerImage = loadAvatarImage(selectedAvatar);
         this.backgroundImage = loadMapImage(selectedMap); // ← carga el mapa
         this.username = username;
         this.db = db;
+        this.stage = stage;
         canvas = new Canvas(1280, 720);
         gc = canvas.getGraphicsContext2D();
         gameLogic = new GameLogic(config);
@@ -73,6 +79,7 @@ public class GameView extends Pane {
         getChildren().add(canvas);
         setFocusTraversable(true);
         setupControls();
+        setupMouseControls();
         setupNetworkHandlers();
         AudioManager.playMusic("/sounds/Coconut Mall - Mario Kart Wii OST.mp3");
     }
@@ -98,6 +105,21 @@ public class GameView extends Pane {
                 break;
             case "OPPONENT_DEAD":
                 opponentDead = true;
+                if (playerIsDead) {
+                    // Ambos están muertos, mostrar resultado final
+                    showFinalResult = true;
+                    gameEnded = true;
+                    AudioManager.stopMusic();
+                    AudioManager.playSound("/sounds/smb_stage_clear.wav");
+                    // Determinar ganador
+                    int myScore = gameLogic.getScore();
+                    if (myScore > opponentScore) {
+                        playerWon = true;
+                    } else if (myScore < opponentScore) {
+                        playerWon = false;
+                    }
+                    // Si es empate, playerWon sigue siendo false pero mostraremos "DRAW"
+                }
                 break;
             case "OPPONENT_DISCONNECTED":
                 opponentDisconnected = true;
@@ -115,6 +137,7 @@ public class GameView extends Pane {
 
     private void setupControls() {
         setOnKeyPressed(e -> {
+            if (playerIsDead) return; // Ignorar entrada si el jugador está muerto
             switch (e.getCode()) {
                 case LEFT, A -> leftPressed = true;
                 case RIGHT, D -> rightPressed = true;
@@ -133,6 +156,27 @@ public class GameView extends Pane {
                 }
             }
         });
+    }
+
+    private void setupMouseControls() {
+        setOnMouseClicked(e -> {
+            // Solo procesar clics si se está mostrando el resultado final
+            if (!showFinalResult) return;
+            
+            double mouseX = e.getX();
+            double mouseY = e.getY();
+            
+            // Detectar clic en botón de menú
+            if (mouseX >= menuButtonX && mouseX <= menuButtonX + menuButtonWidth &&
+                mouseY >= menuButtonY && mouseY <= menuButtonY + menuButtonHeight) {
+                returnToMenu();
+            }
+        });
+    }
+    
+    private void returnToMenu() {
+        AudioManager.stopMusic();
+        new MenuScreen(stage, username, connection, db).show();
     }
 
     // ── Game loop ─────────────────────────────────────────────
@@ -155,6 +199,11 @@ public class GameView extends Pane {
             gameLogic.centerPlayer((int) canvas.getWidth(), (int) canvas.getHeight());
             playerPositioned = true;
         }
+        // Si el jugador está muerto, congelar el juego pero seguir recibiendo actualizaciones del servidor
+        if (playerIsDead) {
+            pushStateToServer();
+            return;
+        }
         if (leftPressed)
             gameLogic.moveLeft();
         if (rightPressed)
@@ -163,7 +212,7 @@ public class GameView extends Pane {
         gameLogic.update((int) canvas.getWidth(), (int) canvas.getHeight());
         pushStateToServer();
         if (gameLogic.isGameOver()) {
-            triggerGameOver();
+            playerIsDead = true;
             AudioManager.stopMusic();
             AudioManager.playSound("/sounds/smb_gameover.wav");
             if (!deadNotified) {
@@ -197,6 +246,25 @@ public class GameView extends Pane {
         playerWon = true;
     }
 
+    private void checkFinalResult() {
+        // Detectar automáticamente cuando ambos jugadores están muertos
+        if (playerIsDead && opponentDead && !showFinalResult) {
+            showFinalResult = true;
+            gameEnded = true;
+            AudioManager.stopMusic();
+            AudioManager.playSound("/sounds/smb_stage_clear.wav");
+            
+            // Determinar ganador comparando puntajes
+            int myScore = gameLogic.getScore();
+            if (myScore > opponentScore) {
+                playerWon = true;
+            } else if (myScore < opponentScore) {
+                playerWon = false;
+            }
+            // Si es empate, playerWon sigue siendo false pero mostraremos "DRAW"
+        }
+    }
+
     // ── Renderizado ───────────────────────────────────────────
 
     private void render() {
@@ -208,6 +276,7 @@ public class GameView extends Pane {
         drawOpponentHud(gc);
         drawScore(gc);
         drawLevel(gc);
+        checkFinalResult(); // Detectar si ambos están muertos
         drawEndGame();
     }
 
@@ -389,12 +458,19 @@ public class GameView extends Pane {
                     canvas.getWidth() / 2 - 90, canvas.getHeight() / 2 + 20);
             return;
         }
-        if (opponentDead && !gameEnded) {
-            gc.setFill(Color.YELLOW);
-            gc.setFont(Font.font("Arial", FontWeight.BOLD, 20));
-            gc.fillText("Opponent defeated! Keep playing...",
-                    canvas.getWidth() / 2 - 180, 100);
+        
+        // Mostrar resultado final cuando ambos jugadores estén muertos
+        if (showFinalResult) {
+            drawFinalResult();
+            return;
         }
+        
+        // Mostrar pantalla de espera si el jugador está muerto pero el rival no
+        if (playerIsDead && !opponentDead) {
+            drawWaitingForOpponent();
+            return;
+        }
+        
         if (gameEnded) {
             gc.setFill(Color.rgb(0, 0, 0, 0.7));
             gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
@@ -403,6 +479,83 @@ public class GameView extends Pane {
             else
                 drawGameOver();
         }
+    }
+    
+    private void drawWaitingForOpponent() {
+        gc.setFill(Color.rgb(0, 0, 0, 0.7));
+        gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
+        
+        gc.setFill(Color.YELLOW);
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 40));
+        gc.fillText("Esperando al oponente...",
+                canvas.getWidth() / 2 - 220, canvas.getHeight() / 2 - 80);
+        
+        gc.setFill(Color.WHITE);
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 28));
+        gc.fillText("Tu Puntaje: " + gameLogic.getScore(),
+                canvas.getWidth() / 2 - 150, canvas.getHeight() / 2 + 20);
+        gc.fillText("Tu Nivel: " + gameLogic.getLevel(),
+                canvas.getWidth() / 2 - 120, canvas.getHeight() / 2 + 80);
+    }
+    
+    private void drawFinalResult() {
+        gc.setFill(Color.rgb(0, 0, 0, 0.7));
+        gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
+        
+        int myScore = gameLogic.getScore();
+        int myLevel = gameLogic.getLevel();
+        boolean isWin = myScore > opponentScore;
+        boolean isDraw = myScore == opponentScore;
+        
+        // Título del resultado
+        if (isDraw) {
+            gc.setFill(Color.CYAN);
+            gc.setFont(Font.font("Arial", FontWeight.BOLD, 60));
+            gc.fillText("DRAW", canvas.getWidth() / 2 - 100, canvas.getHeight() / 2 - 100);
+        } else if (isWin) {
+            gc.setFill(Color.LIME);
+            gc.setFont(Font.font("Arial", FontWeight.BOLD, 60));
+            gc.fillText("WIN", canvas.getWidth() / 2 - 80, canvas.getHeight() / 2 - 100);
+        } else {
+            gc.setFill(Color.RED);
+            gc.setFont(Font.font("Arial", FontWeight.BOLD, 60));
+            gc.fillText("LOST", canvas.getWidth() / 2 - 100, canvas.getHeight() / 2 - 100);
+        }
+        
+        // Información del jugador
+        gc.setFill(Color.WHITE);
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 22));
+        gc.fillText("Your Score: " + myScore, canvas.getWidth() / 2 - 150, canvas.getHeight() / 2 - 20);
+        gc.fillText("Your Level: " + myLevel, canvas.getWidth() / 2 - 150, canvas.getHeight() / 2 + 20);
+        
+        // Información del rival
+        gc.setFill(Color.CORNFLOWERBLUE);
+        gc.fillText("Rival Score: " + opponentScore, canvas.getWidth() / 2 - 150, canvas.getHeight() / 2 + 80);
+        gc.fillText("Rival Level: " + opponentLevel, canvas.getWidth() / 2 - 150, canvas.getHeight() / 2 + 120);
+        
+        // Botón de menú
+        drawMenuButton();
+    }
+    
+    private double menuButtonX = 0;
+    private double menuButtonY = 0;
+    private double menuButtonWidth = 180;
+    private double menuButtonHeight = 50;
+    
+    private void drawMenuButton() {
+        menuButtonX = canvas.getWidth() / 2 - menuButtonWidth / 2;
+        menuButtonY = canvas.getHeight() - 100;
+        
+        gc.setFill(Color.rgb(50, 50, 50));
+        gc.fillRoundRect(menuButtonX, menuButtonY, menuButtonWidth, menuButtonHeight, 10, 10);
+        
+        gc.setStroke(Color.GOLD);
+        gc.setLineWidth(3);
+        gc.strokeRoundRect(menuButtonX, menuButtonY, menuButtonWidth, menuButtonHeight, 10, 10);
+        
+        gc.setFill(Color.WHITE);
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 20));
+        gc.fillText("Menu", menuButtonX + 60, menuButtonY + 35);
     }
 
     // ── Carga de imágenes ─────────────────────────────────────

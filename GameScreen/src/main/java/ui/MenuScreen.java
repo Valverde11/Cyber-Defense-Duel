@@ -357,7 +357,7 @@ public class MenuScreen {
 
     private void goToGame(GameConfig config) {
         GameView gameView = new GameView(config, connection,
-                selectedAvatar, selectedMap, username, db);
+                selectedAvatar, selectedMap, username, db, stage);
         Scene scene = new Scene(gameView, 1280, 720);
         stage.setScene(scene);
         stage.setTitle("Cyber Defense Duel");
