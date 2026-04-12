@@ -396,23 +396,27 @@ public class MenuScreen {
     }
 
     private void joinQueue() {
-        if (selectedAvatar == null || selectedAvatar.isBlank()) {
-            if (statusLabel != null) {
-                statusLabel.setTextFill(Color.web("#ff4444"));
-                statusLabel.setText("Debes seleccionar avatar antes de jugar");
-            }
-            return;
+    if (selectedAvatar == null || selectedAvatar.isBlank()) {
+        if (statusLabel != null) {
+            statusLabel.setTextFill(Color.web("#ff4444"));
+            statusLabel.setText("Debes seleccionar avatar antes de jugar");
         }
-        if (selectedMap == null || selectedMap.isBlank()) {
-            if (statusLabel != null) {
-                statusLabel.setTextFill(Color.web("#ff4444"));
-                statusLabel.setText("Debes seleccionar mapa antes de jugar");
-            }
-            return;
-        }
-        connection.joinQueue();
-        showWaitingScreen();
+        return;
     }
+    if (selectedMap == null || selectedMap.isBlank()) {
+        if (statusLabel != null) {
+            statusLabel.setTextFill(Color.web("#ff4444"));
+            statusLabel.setText("Debes seleccionar mapa antes de jugar");
+        }
+        return;
+    }
+    showWaitingScreen();
+    // Pequeño delay para asegurar que el handler esté listo
+    javafx.animation.PauseTransition pause = 
+        new javafx.animation.PauseTransition(Duration.millis(100));
+    pause.setOnFinished(e -> connection.joinQueue());
+    pause.play();
+}
 
     private void tryStartGame() {
         if (!matchFoundReceived || pendingConfig == null) return;
