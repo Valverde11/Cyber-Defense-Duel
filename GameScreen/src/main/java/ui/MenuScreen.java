@@ -333,7 +333,6 @@ public class MenuScreen {
         countdown.setFont(Font.font("Courier New", FontWeight.BOLD, 80));
         countdown.setTextFill(Color.web("#00dcff"));
 
-        // Cuenta regresiva solo visual
         Timeline ct = new Timeline(
             new KeyFrame(Duration.seconds(0), e -> countdown.setText("3")),
             new KeyFrame(Duration.seconds(1), e -> countdown.setText("2")),
@@ -381,11 +380,9 @@ public class MenuScreen {
                 showMatchFoundScreen();
             }
             case "CONFIG" -> {
+                // El servidor ya esperó 3.5s — arrancar directo
                 pendingConfig = parseConfig(msg);
-                // Esperar 3 segundos para que el countdown termine y arrancar
-                PauseTransition pause = new PauseTransition(Duration.seconds(3));
-                pause.setOnFinished(e -> goToGame(pendingConfig));
-                pause.play();
+                goToGame(pendingConfig);
             }
             case "ERROR" -> {
                 if (statusLabel != null) {

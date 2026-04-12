@@ -25,13 +25,16 @@ public class GameSession {
     public void start() {
         System.out.println("[GameSession] Partida iniciada");
 
-        // 1. Primero MATCH_FOUND
+        // 1. MATCH_FOUND
         JsonObject matchMsg = new JsonObject();
         matchMsg.addProperty("type", "MATCH_FOUND");
         player1.send(matchMsg.toString());
         player2.send(matchMsg.toString());
 
-        // 2. Luego CONFIG
+        // 2. Esperar 3.5 segundos para que el cliente muestre el countdown
+        try { Thread.sleep(3500); } catch (InterruptedException ignored) {}
+
+        // 3. CONFIG — el cliente arranca el juego al recibirlo
         JsonObject configMsg = new JsonObject();
         configMsg.addProperty("type",                   "CONFIG");
         configMsg.addProperty("initialHp",              100);
