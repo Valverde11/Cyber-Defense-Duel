@@ -1,7 +1,6 @@
 package ui;
 
 import com.google.gson.JsonObject;
-
 import client.ServerConnection;
 import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
