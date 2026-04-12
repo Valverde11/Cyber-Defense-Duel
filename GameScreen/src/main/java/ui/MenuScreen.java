@@ -88,6 +88,7 @@ public class MenuScreen {
         stage.setTitle("Cyber Defense Duel — Menú");
         stage.setFullScreen(true);
 
+        // Handler se registra UNA sola vez aquí y nunca se cambia
         initServerHandlers();
         connection.selectAvatar(selectedAvatar);
     }
@@ -117,10 +118,8 @@ public class MenuScreen {
         mapPreview.setPreserveRatio(false);
         mapPreview.setStyle("-fx-border-color: #223344; -fx-border-width: 1;");
 
-        // Si ya había mapa seleccionado, mostrar preview
-        if (selectedMap != null) {
+        if (selectedMap != null)
             mapPreview.setImage(loadMapImage(getMapIdForName(selectedMap)));
-        }
 
         mapNameLabel = new Label(selectedMap != null ? selectedMap : "Sin mapa seleccionado");
         mapNameLabel.setFont(Font.font("Courier New", 11));
@@ -200,7 +199,6 @@ public class MenuScreen {
                         c.setStyle(tileStyle(c.getUserData().equals(selectedAvatar)));
                 }
                 rootPane.getChildren().setAll(buildMenuPanel());
-                initServerHandlers();
             });
             card.setOnMouseEntered(e -> {
                 if (!card.getUserData().equals(selectedAvatar))
@@ -213,10 +211,7 @@ public class MenuScreen {
         }
 
         Button backBtn = cyberButton("← VOLVER", "#445566");
-        backBtn.setOnAction(e -> {
-            rootPane.getChildren().setAll(buildMenuPanel());
-            initServerHandlers();
-        });
+        backBtn.setOnAction(e -> rootPane.getChildren().setAll(buildMenuPanel()));
 
         VBox panel = new VBox(30, header, avatarBox, backBtn);
         panel.setAlignment(Pos.CENTER);
@@ -235,8 +230,10 @@ public class MenuScreen {
         mapsBox.setAlignment(Pos.CENTER);
 
         for (int i = 0; i < MAP_IDS.length; i++) {
-            String mapId   = MAP_IDS[i];
-            String mapName = MAP_NAMES[i];
+            String mapId      = MAP_IDS[i];
+            String mapName    = MAP_NAMES[i];
+            final String fId  = mapId;
+            final String fName = mapName;
 
             Image img = loadMapImage(mapId);
             ImageView preview = new ImageView(img);
@@ -254,25 +251,18 @@ public class MenuScreen {
             card.setStyle(mapCardStyle(mapName.equals(selectedMap)));
             card.setUserData(mapId);
 
-            final String finalMapName = mapName;
-            final String finalMapId   = mapId;
-
             card.setOnMouseClicked(e -> {
-                selectedMap = finalMapName;
-                connection.selectMap(finalMapName);
+                selectedMap = fName;
+                connection.selectMap(fName);
                 rootPane.getChildren().setAll(buildMenuPanel());
-                initServerHandlers();
             });
             card.setOnMouseEntered(e -> card.setStyle(mapCardStyle(true)));
-            card.setOnMouseExited(e  -> card.setStyle(mapCardStyle(finalMapName.equals(selectedMap))));
+            card.setOnMouseExited(e  -> card.setStyle(mapCardStyle(fName.equals(selectedMap))));
             mapsBox.getChildren().add(card);
         }
 
         Button backBtn = cyberButton("← VOLVER", "#445566");
-        backBtn.setOnAction(e -> {
-            rootPane.getChildren().setAll(buildMenuPanel());
-            initServerHandlers();
-        });
+        backBtn.setOnAction(e -> rootPane.getChildren().setAll(buildMenuPanel()));
 
         VBox panel = new VBox(30, header, mapsBox, backBtn);
         panel.setAlignment(Pos.CENTER);
@@ -311,9 +301,8 @@ public class MenuScreen {
         mapInfo.setFill(Color.web("#445566"));
 
         ImageView mapImg = new ImageView();
-        if (selectedMap != null) {
+        if (selectedMap != null)
             mapImg.setImage(loadMapImage(getMapIdForName(selectedMap)));
-        }
         mapImg.setFitWidth(400);
         mapImg.setFitHeight(225);
         mapImg.setPreserveRatio(false);
@@ -322,7 +311,6 @@ public class MenuScreen {
         cancelBtn.setOnAction(e -> {
             anim.stop();
             rootPane.getChildren().setAll(buildMenuPanel());
-            initServerHandlers();
         });
 
         VBox panel = new VBox(24, title, dots, mapImg, sub, mapInfo, cancelBtn);
@@ -361,7 +349,7 @@ public class MenuScreen {
         rootPane.getChildren().setAll(panel);
     }
 
-    // ── Red ──────────────────────────────────────────────
+    // ── Red — se registra UNA sola vez en show() ──────────
 
     private void initServerHandlers() {
         connection.setOnMessage(msg -> Platform.runLater(() ->
@@ -376,6 +364,7 @@ public class MenuScreen {
 
     private void handleServerMessage(JsonObject msg) {
         String type = msg.get("type").getAsString();
+        System.out.println("[MenuScreen] Mensaje: " + type);
         switch (type) {
             case "AVATAR_OK", "MAP_OK" -> {
                 if (statusLabel != null) {
@@ -408,13 +397,17 @@ public class MenuScreen {
 
     private void joinQueue() {
         if (selectedAvatar == null || selectedAvatar.isBlank()) {
-            statusLabel.setTextFill(Color.web("#ff4444"));
-            statusLabel.setText("Debes seleccionar avatar antes de jugar");
+            if (statusLabel != null) {
+                statusLabel.setTextFill(Color.web("#ff4444"));
+                statusLabel.setText("Debes seleccionar avatar antes de jugar");
+            }
             return;
         }
         if (selectedMap == null || selectedMap.isBlank()) {
-            statusLabel.setTextFill(Color.web("#ff4444"));
-            statusLabel.setText("Debes seleccionar mapa antes de jugar");
+            if (statusLabel != null) {
+                statusLabel.setTextFill(Color.web("#ff4444"));
+                statusLabel.setText("Debes seleccionar mapa antes de jugar");
+            }
             return;
         }
         connection.joinQueue();
@@ -459,23 +452,17 @@ public class MenuScreen {
         return config;
     }
 
-    // ── Helper para buscar mapId por nombre ───────────────
-
     private String getMapIdForName(String mapName) {
-        for (int i = 0; i < MAP_NAMES.length; i++) {
+        for (int i = 0; i < MAP_NAMES.length; i++)
             if (MAP_NAMES[i].equals(mapName)) return MAP_IDS[i];
-        }
         return MAP_IDS[0];
     }
-
-    // ── Carga de imágenes ────────────────────────────────
 
     private Image loadAvatarImage(String avatarId) {
         try {
             var stream = getClass().getResourceAsStream(
                     "/assets/characters/" + avatarId + ".png");
-            if (stream == null) return null;
-            return new Image(stream);
+            return stream != null ? new Image(stream) : null;
         } catch (Exception e) { return null; }
     }
 
@@ -483,12 +470,9 @@ public class MenuScreen {
         try {
             var stream = getClass().getResourceAsStream(
                     "/assets/backgrounds/" + mapId + ".png");
-            if (stream == null) return null;
-            return new Image(stream);
+            return stream != null ? new Image(stream) : null;
         } catch (Exception e) { return null; }
     }
-
-    // ── Helpers de estilo ────────────────────────────────
 
     private String mapCardStyle(boolean selected) {
         String border = selected ? "#00dcff" : "#223344";
