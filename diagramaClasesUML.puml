@@ -1,0 +1,493 @@
+@startuml Cyber_Defense_Duel_UML
+
+!define ABSTRACT_COLOR #E1F5FF
+!define ENUM_COLOR #FFF9C4
+!define MODEL_COLOR #F3E5F5
+!define UI_COLOR #E8F5E9
+!define SERVER_COLOR #FFE0B2
+!define CLIENT_COLOR #F1F8E9
+!define PERSISTENCE_COLOR #FCE4EC
+
+' ========== ENUMERACIONES ==========
+enum AttackType {
+  YELLOW
+  RED
+  BLUE
+}
+
+' ========== MODELOS DE DATOS ==========
+package "Model" {
+  class UserRecord {
+    - username: String
+    - passwordHash: String
+    - avatar: String
+    - highScore: int
+    - totalScore: int
+    - gamesPlayed: int
+    - xpYellow: int
+    - xpRed: int
+    - xpBlue: int
+  }
+}
+
+' ========== LÓGICA DEL JUEGO ==========
+package "Logic" {
+  class GameConfig {
+    + initialHp: int
+    + baseSpawnRate: double
+    + baseAttackSpeed: double
+    + scorePerKill: int
+    + difficultyStepScore: int
+    + spawnMultiplierPerLevel: double
+    + speedAddPerLevel: double
+    + damageYellow: int
+    + damageRed: int
+    + damageBlue: int
+  }
+
+  class Player {
+    - x: int
+    - y: int
+    - width: int = 100
+    - height: int = 100
+    - speed: int = 7
+    - hp: int
+    - maxHp: int
+    - lastDamageTime: long
+    - invulnerabilityTime: long = 800
+
+    + Player(x: int, y: int, hp: int)
+    + damage(amount: int): void
+    + isInvulnerable(): boolean
+    + getHp(): int
+    + getMaxHp(): int
+    + moveLeft(): void
+    + moveRight(): void
+    + update(panelWidth: int): void
+    + setPosition(x: int, y: int): void
+    + getX(): int
+    + getY(): int
+    + getWidth(): int
+    + getHeight(): int
+  }
+
+  class Bullet {
+    - x: int
+    - y: int
+    - width: int = 64
+    - height: int = 64
+    - speed: int = 8
+    - type: AttackType
+    - sprite: Image
+
+    + Bullet(startX: int, startY: int, type: AttackType)
+    - loadSprite(): void
+    + getSprite(): Image
+    + update(): void
+    + getX(): int
+    + getY(): int
+    + getWidth(): int
+    + getHeight(): int
+    + getType(): AttackType
+    + isOutOfBounds(panelHeight: int): boolean
+  }
+
+  class Enemy {
+    - x: int
+    - y: int
+    - width: int = 64
+    - height: int = 64
+    - speed: int
+    - type: AttackType
+    - sprite: Image
+
+    + Enemy(startX: int, startY: int, speed: int, type: AttackType)
+    - loadSprite(): void
+    + getSprite(): Image
+    + update(): void
+    + getX(): int
+    + getY(): int
+    + getWidth(): int
+    + getHeight(): int
+    + getType(): AttackType
+    + isOutOfBounds(panelHeight: int): boolean
+  }
+
+  class GameLogic {
+    - config: GameConfig
+    - player: Player
+    - bullets: Bullet[]
+    - bulletCount: int
+    - enemies: Enemy[]
+    - enemyCount: int
+    - lastShotTime: long
+    - shootCooldown: long = 300
+    - lastLevel: int
+    - score: int
+    - yellowKills: int
+    - redKills: int
+    - blueKills: int
+
+    + GameLogic(config: GameConfig)
+    + moveLeft(): void
+    + moveRight(): void
+    + shootYellow(): void
+    + shootRed(): void
+    + shootBlue(): void
+    - shoot(type: AttackType): void
+    + centerPlayer(panelWidth: int, panelHeight: int): void
+    + update(panelWidth: int, panelHeight: int): void
+    - updatePlayer(panelWidth: int): void
+    - updateBullets(panelHeight: int): void
+    - updateEnemies(panelHeight: int): void
+    - checkBulletCollisions(): void
+    - checkPlayerCollisions(): void
+    - collision(enemy: Enemy, player: Player): boolean
+    + spawnEnemy(panelWidth: int): void
+    - removeBullet(index: int): void
+    - removeEnemy(index: int): void
+    + isGameOver(): boolean
+    + getPlayer(): Player
+    + getBullets(): Bullet[]
+    + getBulletCount(): int
+    + getEnemies(): Enemy[]
+    + getEnemyCount(): int
+    + getScore(): int
+    + getLevel(): int
+    + getYellowKills(): int
+    + getRedKills(): int
+    + getBlueKills(): int
+  }
+}
+
+' ========== PERSISTENCIA ==========
+package "Persistence" {
+  class SimpleJson {
+    + toJson(record: UserRecord): String
+    + readString(json: String, key: String): String
+    + readInt(json: String, key: String): int
+  }
+
+  class DatabaseManager {
+    - DB_FILE: String = "database.json"
+    - users: UserRecord[]
+    - userCount: int
+
+    + DatabaseManager()
+    + register(username: String, password: String): boolean
+    + login(username: String, password: String): UserRecord
+    + saveAvatar(username: String, avatar: String): void
+    + updateHighScore(username: String, score: int): void
+    - findUser(username: String): UserRecord
+    - hash(input: String): String
+    - save(): void
+    + updateStats(username: String, score: int, y: int, r: int, b: int): void
+    + registerGame(username: String): void
+    - load(): void
+  }
+}
+
+' ========== AUDIO ==========
+package "Audio" {
+  class AudioManager {
+    - musicPlayer: MediaPlayer {static}
+
+    + playMusic(path: String): void {static}
+    + stopMusic(): void {static}
+    + playSound(path: String): void {static}
+  }
+}
+
+' ========== RED - CLIENTE ==========
+package "Client" {
+  class ServerConnection {
+    - host: String
+    - port: int
+    - socket: Socket
+    - in: BufferedReader
+    - out: PrintWriter
+    - readerThread: Thread
+    - running: volatile boolean
+    - onMessage: Consumer<JsonObject>
+    - onError: Consumer<String>
+
+    + ServerConnection(host: String, port: int)
+    + connect(): void
+    - startReader(): void
+    + send(json: JsonObject): void
+    + register(username: String, password: String): void
+    + login(username: String, password: String): void
+    + selectAvatar(avatar: String): void
+    + selectMap(map: String): void
+    + joinQueue(): void
+    + stateUpdate(hp: int, score: int, level: int): void
+    + playerDead(finalScore: int, yellow: int, red: int, blue: int): void
+    + close(): void
+    + setOnMessage(onMessage: Consumer<JsonObject>): void
+    + setOnError(onError: Consumer<String>): void
+  }
+
+  class AvatarScreen
+}
+
+' ========== UI ==========
+package "UI" {
+  class LoginScreen {
+    - stage: Stage
+    - connection: ServerConnection
+    - db: DatabaseManager
+
+    + LoginScreen(stage: Stage)
+    + LoginScreen(stage: Stage, connection: ServerConnection)
+    - goToMenu(username: String, initialAvatar: String): void
+    - initConnection(status: Label): void
+    - handleServerMessage(msg: JsonObject, status: Label): void
+    + show(): void
+    - styleField(field: TextField, prompt: String): void
+    - fieldLabel(text: String): Label
+    - cyberButton(text: String, color: String): Button
+  }
+
+  class MenuScreen {
+    - DEFAULT_AVATAR: String = "character_1" {static}
+    - AVATAR_IDS: List<String> {static}
+    - MAP_IDS: List<String> {static}
+    - MAP_NAMES: List<String> {static}
+
+    - stage: Stage
+    - username: String
+    - connection: ServerConnection
+    - db: DatabaseManager
+    - selectedAvatar: String
+    - selectedMap: String
+    - pendingConfig: GameConfig
+    - matchFoundReceived: boolean
+    - mapPreview: ImageView
+    - mapNameLabel: Label
+
+    + MenuScreen(stage: Stage, username: String, connection: ServerConnection, initialAvatar: String, db: DatabaseManager)
+    + MenuScreen(stage: Stage, username: String, connection: ServerConnection, db: DatabaseManager)
+    - getAvatarName(avatarId: String): String {static}
+    + show(): void
+    - chooseMap(statusLabel: Label): void
+    - mapCardStyle(selected: boolean): String
+    - chooseAvatar(statusLabel: Label, avatarStatusLabel: Label): void
+    - refreshAvatarSelection(avatarBox: HBox): void
+    - tileStyle(selected: boolean): String
+    - initServerHandlers(statusLabel: Label): void
+    - handleServerMessage(msg: JsonObject, statusLabel: Label): void
+    - joinQueue(statusLabel: Label): void
+    - tryStartGame(): void
+    - goToGame(config: GameConfig): void
+    - goToLogin(): void
+    - showMatchFoundAlert(): void
+    - parseConfig(msg: JsonObject): GameConfig
+    - loadAvatarImage(avatarId: String): Image
+    - loadMapImage(mapId: String): Image
+    - cyberButton(text: String, color: String): Button
+    - infoLabel(text: String): Label
+    - separator(): Separator
+  }
+
+  class GameView {
+    - canvas: Canvas
+    - gc: GraphicsContext
+    - gameLogic: GameLogic
+    - leftPressed: boolean
+    - rightPressed: boolean
+    - playerPositioned: boolean
+    - config: GameConfig
+    - connection: ServerConnection
+    - playerImage: Image
+    - backgroundImage: Image
+    - db: DatabaseManager
+    - username: String
+    - lastEnemySpawn: long
+    - lastStatePush: long
+    - statePushIntervalMs: long = 200
+    - playerWon: boolean
+    - gameEnded: boolean
+    - opponentDead: boolean
+    - opponentDisconnected: boolean
+    - deadNotified: boolean
+    - opponentHp: int
+    - opponentScore: int
+    - opponentLevel: int
+    - opponentUsername: String
+
+    + GameView(config: GameConfig, connection: ServerConnection, selectedAvatar: String, selectedMap: String, username: String, db: DatabaseManager)
+    - setupNetworkHandlers(): void
+    - handleServerMessage(msg: JsonObject): void
+    - setupControls(): void
+    + startGame(): void
+    - update(): void
+    - pushStateToServer(): void
+    - triggerGameOver(): void
+    - triggerGameWin(): void
+    - render(): void
+    - drawBackground(): void
+    - drawPlayer(): void
+    - drawBullets(): void
+    - drawEnemies(): void
+    - drawHealthBar(gc: GraphicsContext): void
+    - drawScore(gc: GraphicsContext): void
+    - drawLevel(gc: GraphicsContext): void
+    - drawOpponentHud(gc: GraphicsContext): void
+    - spawnEnemies(): void
+    - drawGameOver(): void
+    - drawGameWin(): void
+    - drawEndGame(): void
+    - loadAvatarImage(avatarId: String): Image
+    - loadMapImage(mapName: String): Image
+    - typeColor(type: AttackType): Color
+    - getSpawnCooldown(): long
+  }
+}
+
+' ========== RED - SERVIDOR ==========
+package "Server" {
+  class GameServer {
+    - PORT: int = 5000 {static}
+    - serverSocket: ServerSocket
+    - db: DatabaseManager
+    - sessionMgr: SessionManager
+
+    + GameServer()
+    + start(): void
+    - shutdown(): void
+    + main(args: String[]): void {static}
+  }
+
+  class GameSession {
+    - player1: ClientHandler
+    - player2: ClientHandler
+    - db: DatabaseManager
+    - player1Dead: boolean
+    - player2Dead: boolean
+
+    + GameSession(p1: ClientHandler, p2: ClientHandler, db: DatabaseManager)
+    + start(): void
+    + sendToOpponent(sender: ClientHandler, message: String): void
+    + playerDied(player: ClientHandler, score: int): void
+    + playerDisconnected(player: ClientHandler): void
+    - endGame(): void
+  }
+
+  class ClientHandler implements Runnable {
+    - socket: Socket
+    - db: DatabaseManager
+    - sessionMgr: SessionManager
+    - in: BufferedReader
+    - out: PrintWriter
+    - username: String
+    - selectedMap: String
+    - currentSession: GameSession
+
+    + ClientHandler(socket: Socket, db: DatabaseManager, sessionMgr: SessionManager)
+    + run(): void
+    - processMessage(raw: String): void
+    - handleRegister(json: JsonObject): void
+    - handleLogin(json: JsonObject): void
+    - handleSelectAvatar(json: JsonObject): void
+    - handleSelectMap(json: JsonObject): void
+    - handleStateUpdate(json: JsonObject): void
+    - handlePlayerDead(json: JsonObject): void
+    - handleDisconnect(): void
+    + send(jsonMessage: String): void
+    - buildResponse(type: String, message: String): String
+    - buildError(message: String): String
+    + getUsername(): String
+    + getSelectedMap(): String
+    + setSession(s: GameSession): void
+  }
+
+  class SessionManager {
+    - db: DatabaseManager
+    - waitingPlayer: ClientHandler
+
+    + SessionManager(db: DatabaseManager)
+    + joinQueue(player: ClientHandler): void
+    + removeFromQueue(player: ClientHandler): void
+  }
+}
+
+' ========== RELACIONES ==========
+
+' Relaciones de Composición y Uso
+GameLogic --> Player
+GameLogic --> "0..*" Bullet
+GameLogic --> "0..*" Enemy
+GameLogic --> GameConfig
+GameLogic --> AttackType
+
+Bullet --> AttackType
+Enemy --> AttackType
+
+Player --> "0..*" Bullet : colisiona con
+Player --> "0..*" Enemy : colisiona con
+
+GameView --> GameLogic : usa
+GameView --> GameConfig : usa
+GameView --> ServerConnection : usa
+GameView --> DatabaseManager : usa
+GameView --> AudioManager : usa
+
+LoginScreen --> ServerConnection
+LoginScreen --> DatabaseManager
+LoginScreen --> MenuScreen : navega a
+
+MenuScreen --> ServerConnection
+MenuScreen --> DatabaseManager
+MenuScreen --> GameView : navega a
+MenuScreen --> GameConfig : parsea
+
+GameServer --> DatabaseManager
+GameServer --> SessionManager
+
+GameSession --> ClientHandler : player1
+GameSession --> ClientHandler : player2
+GameSession --> DatabaseManager
+
+ClientHandler --> GameSession : actualiza
+ClientHandler --> DatabaseManager
+ClientHandler --> SessionManager
+
+SessionManager --> ClientHandler : maneja cola
+SessionManager --> GameSession : crea
+
+DatabaseManager --> UserRecord : maneja
+
+SimpleJson --> UserRecord : serializa
+
+AudioManager --> UI.GameView : reproduce
+
+' Relaciones de Herencia
+ClientHandler --|> Runnable
+
+' Relaciones de Asociación
+ServerConnection --> "1..*" LoginScreen
+ServerConnection --> "1..*" MenuScreen
+ServerConnection --> "1..*" GameView
+
+note right of GameLogic
+  Maneja toda la lógica del juego
+  incluyendo colisiones, spawn de enemigos
+  y cálculo de puntuación
+end note
+
+note right of GameSession
+  Empareja dos jugadores en una partida
+  y sincroniza su estado durante el juego
+end note
+
+note right of GameServer
+  Servidor aceptador de conexiones
+  que gestiona sesiones de juego 1vs1
+end note
+
+note right of DatabaseManager
+  Persiste datos de usuarios en JSON
+  incluyendo credenciales y estadísticas
+end note
+
+@enduml

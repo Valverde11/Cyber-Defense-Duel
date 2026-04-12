@@ -1,0 +1,1 @@
+El archivo `diagramaClasesUML.puml` contiene el contenido del diagrama, para visualizarlo se debe copiar y pegar en la siguiente web: **https://www.plantuml.com/plantuml/uml/**.
