@@ -1,6 +1,7 @@
 package ui;
 
 import com.google.gson.JsonObject;
+
 import audio.AudioManager;
 import client.ServerConnection;
 import javafx.animation.AnimationTimer;

@@ -1,23 +1,31 @@
 package ui;
 
-import client.ServerConnection;
+import java.util.Arrays;
+import java.util.List;
+
 import com.google.gson.JsonObject;
+
+import client.ServerConnection;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.Separator;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.*;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.text.*;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.Text;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import logic.GameConfig;
 import persistence.DatabaseManager;
-import java.util.Arrays;
-import java.util.List;
 
 public class MenuScreen {
 
