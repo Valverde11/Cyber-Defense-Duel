@@ -1,9 +1,9 @@
 package ui;
 
 import com.google.gson.JsonObject;
-
 import client.ServerConnection;
 import javafx.animation.KeyFrame;
+import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -88,7 +88,6 @@ public class MenuScreen {
         stage.setTitle("Cyber Defense Duel — Menú");
         stage.setFullScreen(true);
 
-        // Handler se registra UNA sola vez aquí y nunca se cambia
         initServerHandlers();
         connection.selectAvatar(selectedAvatar);
     }
@@ -230,9 +229,9 @@ public class MenuScreen {
         mapsBox.setAlignment(Pos.CENTER);
 
         for (int i = 0; i < MAP_IDS.length; i++) {
-            String mapId      = MAP_IDS[i];
-            String mapName    = MAP_NAMES[i];
-            final String fId  = mapId;
+            String mapId   = MAP_IDS[i];
+            String mapName = MAP_NAMES[i];
+            final String fId   = mapId;
             final String fName = mapName;
 
             Image img = loadMapImage(mapId);
@@ -349,7 +348,7 @@ public class MenuScreen {
         rootPane.getChildren().setAll(panel);
     }
 
-    // ── Red — se registra UNA sola vez en show() ──────────
+    // ── Red ───────────────────────────────────────────────
 
     private void initServerHandlers() {
         connection.setOnMessage(msg -> Platform.runLater(() ->
@@ -364,7 +363,6 @@ public class MenuScreen {
 
     private void handleServerMessage(JsonObject msg) {
         String type = msg.get("type").getAsString();
-        System.out.println("[MenuScreen] Mensaje: " + type);
         switch (type) {
             case "AVATAR_OK", "MAP_OK" -> {
                 if (statusLabel != null) {
@@ -381,10 +379,17 @@ public class MenuScreen {
             case "MATCH_FOUND" -> {
                 matchFoundReceived = true;
                 showMatchFoundScreen();
+                // Si CONFIG ya llegó antes, arrancar ahora
+                if (pendingConfig != null) {
+                    tryStartGame();
+                }
             }
             case "CONFIG" -> {
                 pendingConfig = parseConfig(msg);
-                tryStartGame();
+                // Si MATCH_FOUND ya llegó antes, arrancar ahora
+                if (matchFoundReceived) {
+                    tryStartGame();
+                }
             }
             case "ERROR" -> {
                 if (statusLabel != null) {
@@ -396,27 +401,25 @@ public class MenuScreen {
     }
 
     private void joinQueue() {
-    if (selectedAvatar == null || selectedAvatar.isBlank()) {
-        if (statusLabel != null) {
-            statusLabel.setTextFill(Color.web("#ff4444"));
-            statusLabel.setText("Debes seleccionar avatar antes de jugar");
+        if (selectedAvatar == null || selectedAvatar.isBlank()) {
+            if (statusLabel != null) {
+                statusLabel.setTextFill(Color.web("#ff4444"));
+                statusLabel.setText("Debes seleccionar avatar antes de jugar");
+            }
+            return;
         }
-        return;
-    }
-    if (selectedMap == null || selectedMap.isBlank()) {
-        if (statusLabel != null) {
-            statusLabel.setTextFill(Color.web("#ff4444"));
-            statusLabel.setText("Debes seleccionar mapa antes de jugar");
+        if (selectedMap == null || selectedMap.isBlank()) {
+            if (statusLabel != null) {
+                statusLabel.setTextFill(Color.web("#ff4444"));
+                statusLabel.setText("Debes seleccionar mapa antes de jugar");
+            }
+            return;
         }
-        return;
+        showWaitingScreen();
+        PauseTransition pause = new PauseTransition(Duration.millis(100));
+        pause.setOnFinished(e -> connection.joinQueue());
+        pause.play();
     }
-    showWaitingScreen();
-    // Pequeño delay para asegurar que el handler esté listo
-    javafx.animation.PauseTransition pause = 
-        new javafx.animation.PauseTransition(Duration.millis(100));
-    pause.setOnFinished(e -> connection.joinQueue());
-    pause.play();
-}
 
     private void tryStartGame() {
         if (!matchFoundReceived || pendingConfig == null) return;
