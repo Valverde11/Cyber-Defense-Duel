@@ -3,58 +3,45 @@ package logic;
 import audio.AudioManager;
 
 public class GameLogic {
-    private GameConfig config;
-    private Player player;
-    private Bullet[] bullets;
-    private int bulletCount = 0;
-    private Enemy[] enemies;
-    private int enemyCount = 0;
-    private long lastShotTime = 0;
-    private final long shootCooldown = 300;
-    private int lastLevel = 0;
-    private int score = 0;
-    private int yellowKills = 0;
-    private int redKills = 0;
-    private int blueKills = 0;
+    private GameConfig config;                  // Configuración de daños y puntuación
+    private Player player;                      // Jugador principal
+    private Bullet[] bullets;                   // Array de balas en juego
+    private int bulletCount = 0;                // Número actual de balas activas
+    private Enemy[] enemies;                    // Array de enemigos en juego
+    private int enemyCount = 0;                 // Número actual de enemigos activos
+    private long lastShotTime = 0;              // Timestamp del último disparo (para cooldown)
+    private final long shootCooldown = 300;     // Milisegundos entre disparos
+    private int lastLevel = 0;                  // Nivel anterior (para detectar subida y sonar)
+    private int score = 0;                      // Puntuación total
+    private int yellowKills = 0, redKills = 0, blueKills = 0; // Contadores de muertes por tipo
 
     public GameLogic(GameConfig config) {
         this.config = config;
-        bullets = new Bullet[100];
-        enemies = new Enemy[50];
+        bullets = new Bullet[100];               // Máximo 100 balas en pantalla
+        enemies = new Enemy[50];                 // Máximo 50 enemigos simultáneos
         player = new Player(150, 1200, config.initialHp);
     }
 
     // ── Movimiento ────────────────────────────────────────────
 
-    public void moveLeft() {
-        player.moveLeft();
-    }
-
-    public void moveRight() {
-        player.moveRight();
-    }
+    public void moveLeft()  { player.moveLeft(); }
+    public void moveRight() { player.moveRight(); }
 
     // ── Disparo ───────────────────────────────────────────────
 
-    public void shootYellow() {
-        shoot(AttackType.YELLOW);
-    }
-
-    public void shootRed() {
-        shoot(AttackType.RED);
-    }
-
-    public void shootBlue() {
-        shoot(AttackType.BLUE);
-    }
+    public void shootYellow() { shoot(AttackType.YELLOW); }
+    public void shootRed()    { shoot(AttackType.RED); }
+    public void shootBlue()   { shoot(AttackType.BLUE); }
 
     private void shoot(AttackType type) {
         long now = System.currentTimeMillis();
-        if (now - lastShotTime < shootCooldown)
-            return;
+        if (now - lastShotTime < shootCooldown) return; // Espera el cooldown
         lastShotTime = now;
+
+        // Centrar la bala respecto al jugador
         int centerX = player.getX() + player.getWidth() / 2;
         int topY = player.getY();
+
         if (bulletCount < bullets.length) {
             bullets[bulletCount++] = new Bullet(centerX, topY, type);
         }
@@ -64,13 +51,13 @@ public class GameLogic {
     // ── Posición inicial del jugador ──────────────────────────
 
     public void centerPlayer(int panelWidth, int panelHeight) {
-        int margin = (int) (panelHeight * 0.1);
+        int margin = (int) (panelHeight * 0.1);      // 10% de margen inferior
         int x = panelWidth / 2 - player.getWidth() / 2;
         int y = panelHeight - player.getHeight() - margin;
         player.setPosition(x, y);
     }
 
-    // ── Update principal ──────────────────────────────────────
+    // ── Update principal (llamado en cada frame) ──────────────
 
     public void update(int panelWidth, int panelHeight) {
         updatePlayer(panelWidth);
@@ -78,24 +65,25 @@ public class GameLogic {
         updateEnemies(panelHeight);
         checkBulletCollisions();
         checkPlayerCollisions();
+
+        // Detectar subida de nivel y sonar efecto
         int currentLevel = getLevel();
-            if (currentLevel > lastLevel) {
-                AudioManager.playSound("/sounds/smb_1-up.wav");
-                lastLevel = currentLevel;
-            }        
+        if (currentLevel > lastLevel) {
+            AudioManager.playSound("/sounds/smb_1-up.wav");
+            lastLevel = currentLevel;
+        }
     }
 
     private void updatePlayer(int panelWidth) {
-        player.update(panelWidth);
+        player.update(panelWidth); // Limita posición dentro del panel
     }
 
     private void updateBullets(int panelHeight) {
-        // Mover balas
+        // Mover todas las balas
         for (int i = 0; i < bulletCount; i++) {
             bullets[i].update();
         }
-
-        // Eliminar balas fuera de pantalla
+        // Eliminar las que salieron de la pantalla
         for (int i = 0; i < bulletCount; i++) {
             if (bullets[i].isOutOfBounds(panelHeight)) {
                 removeBullet(i);
@@ -105,12 +93,11 @@ public class GameLogic {
     }
 
     private void updateEnemies(int panelHeight) {
-        // Mover enemigos
+        // Mover todos los enemigos (bajan)
         for (int i = 0; i < enemyCount; i++) {
             enemies[i].update();
         }
-
-        // Eliminar enemigos fuera de pantalla
+        // Eliminar los que salieron por abajo
         for (int i = 0; i < enemyCount; i++) {
             if (enemies[i].isOutOfBounds(panelHeight)) {
                 removeEnemy(i);
@@ -126,28 +113,25 @@ public class GameLogic {
             Bullet bullet = bullets[i];
             for (int j = 0; j < enemyCount; j++) {
                 Enemy enemy = enemies[j];
+                // Colisión AABB (cajas alineadas a ejes)
                 boolean collision = bullet.getX() < enemy.getX() + enemy.getWidth() &&
-                        bullet.getX() + bullet.getWidth() > enemy.getX() &&
-                        bullet.getY() < enemy.getY() + enemy.getHeight() &&
-                        bullet.getY() + bullet.getHeight() > enemy.getY();
+                                    bullet.getX() + bullet.getWidth() > enemy.getX() &&
+                                    bullet.getY() < enemy.getY() + enemy.getHeight() &&
+                                    bullet.getY() + bullet.getHeight() > enemy.getY();
 
+                // Solo daña si el color coincide
                 if (collision && bullet.getType() == enemy.getType()) {
+                    // Contabilizar muerte según tipo
                     switch (enemy.getType()) {
-                        case YELLOW:
-                            yellowKills++;
-                            break;
-                        case RED:
-                            redKills++;
-                            break;
-                        case BLUE:
-                            blueKills++;
-                            break;
+                        case YELLOW: yellowKills++; break;
+                        case RED:    redKills++;    break;
+                        case BLUE:   blueKills++;   break;
                     }
                     removeEnemy(j);
                     removeBullet(i);
                     score += config.scorePerKill;
                     AudioManager.playSound("/sounds/smb_kick.wav");
-                    i--;
+                    i--; // Salir del bucle interno y seguir con la siguiente bala
                     break;
                 }
             }
@@ -158,40 +142,35 @@ public class GameLogic {
         for (int i = 0; i < enemyCount; i++) {
             Enemy enemy = enemies[i];
             if (collision(enemy, player)) {
-                int damage = 0;
-                switch (enemy.getType()) {
-                    case YELLOW:
-                        damage = config.damageYellow;
-                        break;
-                    case RED:
-                        damage = config.damageRed;
-                        break;
-                    case BLUE:
-                        damage = config.damageBlue;
-                        break;
-                }
+                int damage = switch (enemy.getType()) {
+                    case YELLOW -> config.damageYellow;
+                    case RED    -> config.damageRed;
+                    case BLUE   -> config.damageBlue;
+                };
                 player.damage(damage);
                 removeEnemy(i);
-                AudioManager.playSound("/sounds/smb_fireworks.wav");
+                AudioManager.playSound("/sounds/smb_fireworks.wav"); // Sonido de daño
                 i--;
             }
         }
     }
 
+    // Método auxiliar para colisión entre Enemy y Player
     private boolean collision(Enemy e, Player p) {
         return e.getX() < p.getX() + p.getWidth() &&
-                e.getX() + e.getWidth() > p.getX() &&
-                e.getY() < p.getY() + p.getHeight() &&
-                e.getY() + e.getHeight() > p.getY();
+               e.getX() + e.getWidth() > p.getX() &&
+               e.getY() < p.getY() + p.getHeight() &&
+               e.getY() + e.getHeight() > p.getY();
     }
 
     // ── Spawn de enemigos ─────────────────────────────────────
 
     public void spawnEnemy(int panelWidth) {
         int level = getLevel();
-        int startX = (int) (Math.random() * (panelWidth - 40));
-        double speed = config.baseAttackSpeed + config.speedAddPerLevel * level;
+        int startX = (int) (Math.random() * (panelWidth - 40));   // Posición X aleatoria
+        double speed = config.baseAttackSpeed + config.speedAddPerLevel * level; // Velocidad aumenta con nivel
         AttackType type = AttackType.values()[(int) (Math.random() * AttackType.values().length)];
+
         if (enemyCount < enemies.length) {
             enemies[enemyCount++] = new Enemy(startX, -40, (int) speed, type);
         }
@@ -212,46 +191,21 @@ public class GameLogic {
     }
 
     // ── Estado del juego ──────────────────────────────────────
+
     public boolean isGameOver() {
         return player.getHp() <= 0;
     }
 
     // ── Getters ───────────────────────────────────────────────
 
-    public Player getPlayer() {
-        return player;
-    }
-
-    public Bullet[] getBullets() {
-        return bullets;
-    }
-
-    public int getBulletCount() {
-        return bulletCount;
-    }
-
-    public Enemy[] getEnemies() {
-        return enemies;
-    }
-
-    public int getEnemyCount() {
-        return enemyCount;
-    }
-
-    public int getScore() {
-        return score;
-    }
-
-    public int getLevel() {
-        return score / config.difficultyStepScore;
-    }
-    public int getYellowKills() {
-        return yellowKills;
-    }
-    public int getRedKills() {
-        return redKills;
-    }
-    public int getBlueKills() {
-        return blueKills;
-    }
+    public Player getPlayer() { return player; }
+    public Bullet[] getBullets() { return bullets; }
+    public int getBulletCount() { return bulletCount; }
+    public Enemy[] getEnemies() { return enemies; }
+    public int getEnemyCount() { return enemyCount; }
+    public int getScore() { return score; }
+    public int getLevel() { return score / config.difficultyStepScore; } // Cada X puntos sube nivel
+    public int getYellowKills() { return yellowKills; }
+    public int getRedKills()    { return redKills; }
+    public int getBlueKills()   { return blueKills; }
 }

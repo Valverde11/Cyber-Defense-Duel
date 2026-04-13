@@ -8,11 +8,13 @@ import javafx.animation.AnimationTimer;
 import javafx.application.Platform;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Button;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import javafx.stage.Stage;
 import logic.Bullet;
 import logic.Enemy;
 import logic.GameConfig;
@@ -36,8 +38,8 @@ public class GameView extends Pane {
     private final DatabaseManager db;
     private final String username;
 
-    private long lastEnemySpawn    = 0;
-    private long lastStatePush     = 0;
+    private long lastEnemySpawn        = 0;
+    private long lastStatePush         = 0;
     private final long statePushIntervalMs = 200;
 
     private long getSpawnCooldown() {
@@ -46,11 +48,12 @@ public class GameView extends Pane {
         return Math.max(100, (long)(500 / multiplier));
     }
 
-    private boolean playerWon          = false;
-    private boolean gameEnded          = false;
-    private boolean opponentDead       = false;
+    private boolean playerWon            = false;
+    private boolean gameEnded            = false;
+    private boolean opponentDead         = false;
     private boolean opponentDisconnected = false;
-    private boolean deadNotified       = false;
+    private boolean deadNotified         = false;
+    private boolean resultShown          = false;
 
     private int    opponentHp       = 100;
     private int    opponentScore    = 0;
@@ -67,11 +70,8 @@ public class GameView extends Pane {
         this.username        = username;
         this.db              = db;
 
-        // Canvas dinámico — se ajusta al tamaño del Pane
         canvas = new Canvas();
         gc     = canvas.getGraphicsContext2D();
-
-        // Bind canvas al tamaño del Pane
         canvas.widthProperty().bind(widthProperty());
         canvas.heightProperty().bind(heightProperty());
 
@@ -90,6 +90,7 @@ public class GameView extends Pane {
             opponentDisconnected = true;
             gameEnded = true;
             playerWon = true;
+            showResultButton();
         }));
     }
 
@@ -105,6 +106,12 @@ public class GameView extends Pane {
                 break;
             case "OPPONENT_DEAD":
                 opponentDead = true;
+                // Si yo ya había muerto, determinar ganador por score
+                if (gameEnded && !resultShown) {
+                    playerWon = gameLogic.getScore() >= opponentScore;
+                    resultShown = true;
+                    showResultButton();
+                }
                 break;
             case "OPPONENT_DISCONNECTED":
                 opponentDisconnected = true;
@@ -112,6 +119,7 @@ public class GameView extends Pane {
                 playerWon = true;
                 AudioManager.stopMusic();
                 AudioManager.playSound("/sounds/smb_stage_clear.wav");
+                showResultButton();
                 break;
             default:
                 break;
@@ -157,8 +165,6 @@ public class GameView extends Pane {
 
         double w = canvas.getWidth();
         double h = canvas.getHeight();
-
-        // Esperar a que el canvas tenga tamaño real
         if (w <= 0 || h <= 0) return;
 
         if (!playerPositioned) {
@@ -183,6 +189,12 @@ public class GameView extends Pane {
                     gameLogic.getBlueKills());
                 deadNotified = true;
             }
+            // Si el oponente ya había muerto antes, determinar ganador
+            if (opponentDead && !resultShown) {
+                playerWon   = gameLogic.getScore() >= opponentScore;
+                resultShown = true;
+                showResultButton();
+            }
         }
     }
 
@@ -196,6 +208,52 @@ public class GameView extends Pane {
 
     private void triggerGameOver() { gameEnded = true; playerWon = false; }
     private void triggerGameWin()  { gameEnded = true; playerWon = true;  }
+
+    // ── Botón de regreso al menú ──────────────────────────────
+
+    private void showResultButton() {
+        Platform.runLater(() -> {
+            Button backBtn = new Button("↩  VOLVER AL MENÚ");
+            backBtn.setFont(Font.font("Courier New", FontWeight.BOLD, 14));
+            backBtn.setTextFill(Color.WHITE);
+            backBtn.setPrefWidth(240);
+            backBtn.setPrefHeight(48);
+
+            String color = playerWon ? "#00c85a" : "#ff3c3c";
+            String base  = "-fx-background-color: transparent;" +
+                           "-fx-border-color: " + color + ";" +
+                           "-fx-border-width: 2;" +
+                           "-fx-border-radius: 6;" +
+                           "-fx-background-radius: 6;" +
+                           "-fx-cursor: hand;";
+            String hover = "-fx-background-color: " + color + "33;" +
+                           "-fx-border-color: " + color + ";" +
+                           "-fx-border-width: 2;" +
+                           "-fx-border-radius: 6;" +
+                           "-fx-background-radius: 6;" +
+                           "-fx-cursor: hand;";
+
+            backBtn.setStyle(base);
+            backBtn.setOnMouseEntered(e -> backBtn.setStyle(hover));
+            backBtn.setOnMouseExited(e  -> backBtn.setStyle(base));
+            backBtn.setOnAction(e -> goToMenu());
+
+            // Centrar el botón en el pane
+            backBtn.layoutXProperty().bind(
+                widthProperty().subtract(240).divide(2));
+            backBtn.layoutYProperty().bind(
+                heightProperty().divide(2).add(80));
+
+            getChildren().add(backBtn);
+        });
+    }
+
+    private void goToMenu() {
+        AudioManager.stopMusic();
+        Stage stage = (Stage) getScene().getWindow();
+        new MenuScreen(stage, username, connection,
+            "character_1", db).show();
+    }
 
     // ── Renderizado ───────────────────────────────────────────
 
@@ -276,14 +334,12 @@ public class GameView extends Pane {
         }
     }
 
-    // ── HUD completo ──────────────────────────────────────────
+    // ── HUD ───────────────────────────────────────────────────
 
     private void drawHUD(double w, double h) {
-        // Fondo HUD superior
         gc.setFill(Color.color(0, 0, 0, 0.75));
         gc.fillRect(0, 0, w, 80);
 
-        // Línea inferior del HUD
         gc.setStroke(Color.color(0, 0.8, 1, 0.3));
         gc.setLineWidth(1);
         gc.strokeLine(0, 80, w, 80);
@@ -291,7 +347,7 @@ public class GameView extends Pane {
         Player player = gameLogic.getPlayer();
         double percent = (double) player.getHp() / player.getMaxHp();
 
-        // ── HP izquierda ──────────────────────────────────
+        // HP izquierda
         gc.setFill(Color.color(1, 1, 1, 0.5));
         gc.setFont(Font.font("Courier New", FontWeight.BOLD, 12));
         gc.fillText("HP  " + username.toUpperCase(), 20, 22);
@@ -313,26 +369,23 @@ public class GameView extends Pane {
         gc.setFont(Font.font("Courier New", 11));
         gc.fillText(player.getHp() + " / " + player.getMaxHp(), 24, 60);
 
-        // ── Score centrado ────────────────────────────────
+        // Score centrado
         gc.setFill(Color.color(1, 1, 1, 0.4));
         gc.setFont(Font.font("Courier New", 10));
         String scoreLabel = "SCORE";
-        double slw = scoreLabel.length() * 6.5;
-        gc.fillText(scoreLabel, w / 2 - slw / 2, 18);
+        gc.fillText(scoreLabel, w / 2 - scoreLabel.length() * 3.2, 18);
 
         gc.setFill(Color.web("#ffd232"));
         gc.setFont(Font.font("Courier New", FontWeight.BOLD, 26));
         String scoreStr = String.format("%06d", gameLogic.getScore());
-        double sw2 = scoreStr.length() * 15.5;
-        gc.fillText(scoreStr, w / 2 - sw2 / 2, 50);
+        gc.fillText(scoreStr, w / 2 - scoreStr.length() * 7.8, 50);
 
-        // ── Nivel ─────────────────────────────────────────
         gc.setFill(Color.color(0.4, 0.7, 1, 0.9));
         gc.setFont(Font.font("Courier New", FontWeight.BOLD, 13));
         String lvlStr = "NVL " + gameLogic.getLevel();
         gc.fillText(lvlStr, w / 2 - lvlStr.length() * 4, 68);
 
-        // ── Oponente derecha ──────────────────────────────
+        // Oponente derecha
         double ox = w - 290;
         double opPercent = Math.max(0, Math.min(1, opponentHp / (double) config.initialHp));
 
@@ -353,13 +406,13 @@ public class GameView extends Pane {
 
         gc.setFill(Color.color(0.6, 0.7, 0.9, 0.9));
         gc.setFont(Font.font("Courier New", 11));
-        gc.fillText(opponentHp + " HP  |  " + opponentScore + " pts  |  NVL "
-                + opponentLevel, ox, 60);
+        gc.fillText(opponentHp + " HP  |  " + opponentScore
+                + " pts  |  NVL " + opponentLevel, ox, 60);
 
-        // ── Controles esquina derecha abajo ───────────────
+        // Controles
         gc.setFont(Font.font("Courier New", 11));
-        gc.setFill(Color.web("#ffd232")); gc.fillText("[Q] Firewall",  w - 160, h - 56);
-        gc.setFill(Color.web("#ff4444")); gc.fillText("[W] Antivirus", w - 160, h - 38);
+        gc.setFill(Color.web("#ffd232")); gc.fillText("[Q] Firewall",    w - 160, h - 56);
+        gc.setFill(Color.web("#ff4444")); gc.fillText("[W] Antivirus",   w - 160, h - 38);
         gc.setFill(Color.web("#4488ff")); gc.fillText("[E] CryptoShield", w - 160, h - 20);
     }
 
@@ -377,7 +430,7 @@ public class GameView extends Pane {
 
     private void drawEndGame(double w, double h) {
         if (opponentDisconnected) {
-            gc.setFill(Color.color(0, 0, 0, 0.75));
+            gc.setFill(Color.color(0, 0, 0, 0.78));
             gc.fillRect(0, 0, w, h);
             gc.setFill(Color.YELLOW);
             gc.setFont(Font.font("Courier New", FontWeight.BOLD, 34));
@@ -395,30 +448,57 @@ public class GameView extends Pane {
         if (gameEnded) {
             gc.setFill(Color.color(0, 0, 0, 0.78));
             gc.fillRect(0, 0, w, h);
-            if (playerWon) drawGameWin(w, h);
-            else           drawGameOver(w, h);
+            if (resultShown) {
+                // Resultado final determinado por score
+                if (playerWon) drawGameWin(w, h);
+                else           drawGameOver(w, h);
+            } else {
+                // Aún esperando al oponente
+                drawWaitingForOpponent(w, h);
+            }
         }
     }
 
     private void drawGameOver(double w, double h) {
         gc.setFill(Color.web("#ff3c3c"));
         gc.setFont(Font.font("Courier New", FontWeight.BOLD, 60));
-        drawCentered("GAME OVER", w, h / 2 - 40);
+        drawCentered("GAME OVER", w, h / 2 - 60);
+
         gc.setFill(Color.web("#ffd232"));
         gc.setFont(Font.font("Courier New", FontWeight.BOLD, 26));
-        drawCentered("Score: " + String.format("%06d", gameLogic.getScore()), w, h / 2 + 20);
-        gc.setFill(Color.color(1, 1, 1, 0.5));
-        gc.setFont(Font.font("Courier New", 14));
-        drawCentered("Esperando al oponente...", w, h / 2 + 60);
+        drawCentered("Tu score: " + String.format("%06d", gameLogic.getScore()), w, h / 2);
+
+        gc.setFill(Color.color(0.6, 0.7, 0.9, 0.9));
+        gc.setFont(Font.font("Courier New", 18));
+        drawCentered("Score rival: " + String.format("%06d", opponentScore), w, h / 2 + 40);
     }
 
     private void drawGameWin(double w, double h) {
         gc.setFill(Color.web("#00c85a"));
         gc.setFont(Font.font("Courier New", FontWeight.BOLD, 60));
-        drawCentered("YOU WIN", w, h / 2 - 40);
+        drawCentered("YOU WIN!", w, h / 2 - 60);
+
         gc.setFill(Color.web("#ffd232"));
         gc.setFont(Font.font("Courier New", FontWeight.BOLD, 26));
-        drawCentered("Score: " + String.format("%06d", gameLogic.getScore()), w, h / 2 + 20);
+        drawCentered("Tu score: " + String.format("%06d", gameLogic.getScore()), w, h / 2);
+
+        gc.setFill(Color.color(0.6, 0.7, 0.9, 0.9));
+        gc.setFont(Font.font("Courier New", 18));
+        drawCentered("Score rival: " + String.format("%06d", opponentScore), w, h / 2 + 40);
+    }
+
+    private void drawWaitingForOpponent(double w, double h) {
+        gc.setFill(Color.web("#ff3c3c"));
+        gc.setFont(Font.font("Courier New", FontWeight.BOLD, 60));
+        drawCentered("GAME OVER", w, h / 2 - 60);
+
+        gc.setFill(Color.web("#ffd232"));
+        gc.setFont(Font.font("Courier New", FontWeight.BOLD, 26));
+        drawCentered("Score: " + String.format("%06d", gameLogic.getScore()), w, h / 2);
+
+        gc.setFill(Color.color(1, 1, 1, 0.5));
+        gc.setFont(Font.font("Courier New", 14));
+        drawCentered("Esperando al oponente...", w, h / 2 + 50);
     }
 
     // ── Helper centrado ───────────────────────────────────────
