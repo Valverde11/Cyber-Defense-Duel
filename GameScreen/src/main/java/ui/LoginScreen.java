@@ -26,11 +26,11 @@ public class LoginScreen {
 
     private final Stage stage;
     private final ServerConnection connection;
-    private final DatabaseManager db = new DatabaseManager(); // ← agregado
+    private final DatabaseManager db = new DatabaseManager(); 
 
     public LoginScreen(Stage stage) {
         this.stage = stage;
-        this.connection = new ServerConnection("192.168.100.10", 5000);
+        this.connection = new ServerConnection("localhost", 5000);
     }
 
     public LoginScreen(Stage stage, ServerConnection connection) {
