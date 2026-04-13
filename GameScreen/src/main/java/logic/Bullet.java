@@ -5,8 +5,8 @@ import javafx.scene.image.Image;
 public class Bullet {
     private int x;
     private int y;
-    private int width = 64;
-    private int height = 64;
+    private int width = 70;
+    private int height = 70;
     private int speed = 8;
     private AttackType type;
     private Image sprite;
