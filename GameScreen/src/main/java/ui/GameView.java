@@ -85,11 +85,11 @@ public class GameView extends Pane {
     }
 
     private void setupNetworkHandlers() {
-        connection.setOnMessage(msg -> Platform.runLater(() -> handleServerMessage(msg)));
-        connection.setOnError(err -> Platform.runLater(() -> {
-            opponentDisconnected = true;
+        connection.setOnMessage(msg -> Platform.runLater(() -> handleServerMessage(msg))); // Callback para mensajes del servidor
+        connection.setOnError(err -> Platform.runLater(() -> { // Callback para errores
+            opponentDisconnected = true; // Marca desconexion del oponente
             gameEnded = true;
-            playerWon = true;
+            playerWon = true; // Gana por desconexion del rival
             showResultButton();
         }));
     }
@@ -152,30 +152,30 @@ public class GameView extends Pane {
 
     public void startGame() {
         AnimationTimer timer = new AnimationTimer() {
-            @Override public void handle(long now) {
-                update();
-                render();
+            @Override public void handle(long now) { // Callback por cada frame
+                update(); // Actualiza logica del juego
+                render(); // Dibuja en pantalla
             }
         };
-        timer.start();
+        timer.start(); // Inicia el game loop
     }
 
     private void update() {
-        if (gameEnded) return;
+        if (gameEnded) return; // Detiene actualizacion si juego termino
 
         double w = canvas.getWidth();
         double h = canvas.getHeight();
         if (w <= 0 || h <= 0) return;
 
         if (!playerPositioned) {
-            gameLogic.centerPlayer((int) w, (int) h);
+            gameLogic.centerPlayer((int) w, (int) h); // Posiciona jugador al inicio
             playerPositioned = true;
         }
-        if (leftPressed)  gameLogic.moveLeft();
-        if (rightPressed) gameLogic.moveRight();
-        spawnEnemies();
-        gameLogic.update((int) w, (int) h);
-        pushStateToServer();
+        if (leftPressed)  gameLogic.moveLeft(); // Movimiento izquierda
+        if (rightPressed) gameLogic.moveRight(); // Movimiento derecha
+        spawnEnemies(); // Genera enemigos segun nivel
+        gameLogic.update((int) w, (int) h); // Actualiza fisica del juego
+        pushStateToServer(); // Envia estado al servidor
 
         if (gameLogic.isGameOver()) {
             triggerGameOver();

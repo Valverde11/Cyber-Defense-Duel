@@ -30,7 +30,7 @@ public class LoginScreen {
 
     public LoginScreen(Stage stage) {
         this.stage = stage;
-        this.connection = new ServerConnection("192.168.100.10", 5000);
+        this.connection = new ServerConnection("192.168.100.9", 5000); // Conexion al servidor
     }
 
     public LoginScreen(Stage stage, ServerConnection connection) {
@@ -47,13 +47,13 @@ public class LoginScreen {
     // ── Conexión y mensajes del servidor ─────────────────────
 
     private void initConnection(Label status) {
-        connection.setOnMessage(msg -> Platform.runLater(() -> handleServerMessage(msg, status)));
-        connection.setOnError(err -> Platform.runLater(() -> {
+        connection.setOnMessage(msg -> Platform.runLater(() -> handleServerMessage(msg, status))); // Callback para mensajes
+        connection.setOnError(err -> Platform.runLater(() -> { // Callback para errores
             status.setTextFill(Color.web("#ff4444"));
             status.setText(err);
         }));
         try {
-            connection.connect();
+            connection.connect(); // Establece conexion TCP
             status.setTextFill(Color.web("#00c85a"));
             status.setText("Conectado al servidor");
         } catch (Exception e) {

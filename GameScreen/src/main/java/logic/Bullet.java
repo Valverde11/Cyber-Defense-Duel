@@ -13,16 +13,16 @@ public class Bullet {
     public Bullet(int startX, int startY, AttackType type) {
         this.x = startX;
         this.y = startY;
-        this.type = type;
+        this.type = type; // Tipo/color de bala (afecta a que enemigo daña)
         loadSprite();               // Carga la imagen correspondiente al tipo
     }
 
     private void loadSprite() {
-        // Elegimos la imagen según el tipo de ataque
+        // Elegimos la imagen segun el tipo de ataque
         String path = switch (type) {
-            case YELLOW -> "/assets/bullets/firewall.png";
-            case RED    -> "/assets/bullets/antivirus.png";
-            case BLUE   -> "/assets/bullets/crypto_shield.png";
+            case YELLOW -> "/assets/bullets/firewall.png"; // Imagen de firewall
+            case RED    -> "/assets/bullets/antivirus.png"; // Imagen de antivirus
+            case BLUE   -> "/assets/bullets/crypto_shield.png"; // Imagen de proteccion
         };
         try {
             sprite = new Image(getClass().getResourceAsStream(path));
@@ -48,6 +48,6 @@ public class Bullet {
 
     // Comprueba si la bala ha salido completamente de la pantalla por arriba
     public boolean isOutOfBounds(int panelHeight) {
-        return y < -height;
+        return y < -height; // Limpieza de balas lejanas
     }
 }

@@ -13,17 +13,17 @@ public class Enemy {
     public Enemy(int startX, int startY, int speed, AttackType type) {
         this.x = startX;
         this.y = startY;
-        this.speed = speed;
+        this.speed = speed; // Velocidad de bajada
         this.type = type;
-        loadSprite();                   // Carga el sprite según el tipo de enemigo
+        loadSprite();                   // Carga el sprite segun el tipo de enemigo
     }
 
     private void loadSprite() {
         // Seleccionamos la imagen correspondiente a cada tipo de ataque
         String path = switch (type) {
-            case YELLOW -> "/assets/enemies/ddos.png";
-            case RED    -> "/assets/enemies/malware.png";
-            case BLUE   -> "/assets/enemies/credential_attack.png";
+            case YELLOW -> "/assets/enemies/ddos.png"; // Imagen de ataque DDoS
+            case RED    -> "/assets/enemies/malware.png"; // Imagen de malware
+            case BLUE   -> "/assets/enemies/credential_attack.png"; // Imagen de ataque a credenciales
         };
         try {
             sprite = new Image(getClass().getResourceAsStream(path));
@@ -49,6 +49,6 @@ public class Enemy {
 
     // Comprueba si el enemigo ha salido completamente de la pantalla por abajo
     public boolean isOutOfBounds(int panelHeight) {
-        return y > panelHeight;
+        return y > panelHeight; // Evita enemigos indefinidamente abajo
     }
 }

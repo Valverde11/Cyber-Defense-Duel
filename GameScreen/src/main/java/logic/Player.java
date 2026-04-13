@@ -23,17 +23,18 @@ public class Player {
 
     public void damage(int amount) {
         long currentTime = System.currentTimeMillis();
-        if (currentTime - lastDamageTime < invulnerabilityTime) {
-            return;
+        if (currentTime - lastDamageTime < invulnerabilityTime) { // Periodo invulnerable
+            return; // Rechaza danio durante invulnerabilidad
         }
-        hp -= amount;
+        hp -= amount; // Aplica danio
+        lastDamageTime = currentTime; // Resetea temporizador
         if (hp < 0) {
-            hp = 0;
+            hp = 0; // Limita HP bajo a cero
         }
     }
 
     public boolean isInvulnerable() {
-        return System.currentTimeMillis() - lastDamageTime < invulnerabilityTime;
+        return System.currentTimeMillis() - lastDamageTime < invulnerabilityTime; // Verifica si esta protegido
     }
 
     public int getHp() {
@@ -53,9 +54,9 @@ public class Player {
     }
 
     public void update(int panelWidth) {
-        if (x < 0)
+        if (x < 0) // Limita borde izquierdo
             x = 0;
-        if (x + width > panelWidth)
+        if (x + width > panelWidth) // Limita borde derecho
             x = panelWidth - width;
     }
 

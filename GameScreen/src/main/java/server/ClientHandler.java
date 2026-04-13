@@ -36,12 +36,12 @@ class ClientHandler implements Runnable {
     public void run() {
         try {
             in  = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            out = new PrintWriter(socket.getOutputStream(), true); // autoFlush
+            out = new PrintWriter(socket.getOutputStream(), true); // autoFlush para respuestas inmediatas
  
             String rawMessage;
-            while ((rawMessage = in.readLine()) != null) {
+            while ((rawMessage = in.readLine()) != null) { // Lee mensajes linea a linea
                 System.out.println("[" + (username != null ? username : "?") + "] >> " + rawMessage);
-                processMessage(rawMessage);
+                processMessage(rawMessage); // Procesa cada mensaje JSON recibido
             }
  
         } catch (IOException e) {
@@ -57,10 +57,10 @@ class ClientHandler implements Runnable {
     // -------------------------------------------------------------------------
     private void processMessage(String raw) {
         try {
-            JsonObject json = JsonParser.parseString(raw).getAsJsonObject();
-            String type = json.get("type").getAsString();
+            JsonObject json = JsonParser.parseString(raw).getAsJsonObject(); // Parsea string JSON a objeto
+            String type = json.get("type").getAsString(); // Extrae tipo de mensaje
  
-            switch (type) {
+            switch (type) { // Despacha segun tipo para manejar cada flujo
  
                 case "REGISTER":
                     handleRegister(json);
@@ -125,7 +125,7 @@ class ClientHandler implements Runnable {
         String user = json.get("username").getAsString().trim();
         String pass = json.get("password").getAsString().trim();
 
-        UserRecord record = db.login(user, pass);
+        UserRecord record = db.login(user, pass); // Verifica credenciales
         if (record == null) {
             send(buildResponse("LOGIN_FAIL", "Usuario o contrasena incorrectos."));
             return;
@@ -176,24 +176,21 @@ class ClientHandler implements Runnable {
      *   {"type":"STATE_UPDATE", "hp":75, "score":240, "level":2}
      */
     private void handleStateUpdate(JsonObject json) {
-        if (currentSession == null) return;
+        if (currentSession == null) return; // No hay sesion activa
  
         JsonObject opponentUpdate = new JsonObject();
-        opponentUpdate.addProperty("type", "OPPONENT_UPDATE");
+        opponentUpdate.addProperty("type", "OPPONENT_UPDATE"); // Etiqueta para el oponente
         opponentUpdate.addProperty("hp",    json.get("hp").getAsInt());
         opponentUpdate.addProperty("score", json.get("score").getAsInt());
         opponentUpdate.addProperty("level", json.get("level").getAsInt());
         opponentUpdate.addProperty("username", username);
  
-        currentSession.sendToOpponent(this, opponentUpdate.toString());
+        currentSession.sendToOpponent(this, opponentUpdate.toString()); // Envia al jugador rival
     }
  
-    /**
-     * El jugador murio (HP = 0).
-     * Notifica al oponente y verifica si la sesion debe cerrarse.
-     */
+    /** El jugador murio (HP = 0). Notifica al oponente y verifica si la sesion debe cerrarse. */
     private void handlePlayerDead(JsonObject json) {
-        if (currentSession == null) return;
+        if (currentSession == null) return; // No hay sesion activa
  
         int finalScore = json.has("score") ? json.get("score").getAsInt() : 0;
         int y = json.has("yellowKills") ? json.get("yellowKills").getAsInt() : 0;
@@ -201,17 +198,17 @@ class ClientHandler implements Runnable {
         int b = json.has("blueKills") ? json.get("blueKills").getAsInt() : 0;
 
         if (username != null) {
-            db.updateStats(username, finalScore, y, r, b);
+            db.updateStats(username, finalScore, y, r, b); // Actualiza estadisticas del jugador
         }
  
         // Notificar al oponente
         JsonObject notif = new JsonObject();
-        notif.addProperty("type", "OPPONENT_DEAD");
+        notif.addProperty("type", "OPPONENT_DEAD"); // Señal de muerte del contrincante
         notif.addProperty("username", username);
         currentSession.sendToOpponent(this, notif.toString());
  
         // Registrar muerte en la sesion
-        currentSession.playerDied(this, finalScore);
+        currentSession.playerDied(this, finalScore); // Sesion registra la muerte
     }
  
     // -------------------------------------------------------------------------

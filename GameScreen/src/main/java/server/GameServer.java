@@ -24,7 +24,7 @@ public class GameServer {
     // -------------------------------------------------------------------------
     public GameServer() {
         db         = new DatabaseManager();   // carga database.json al arrancar
-        sessionMgr = new SessionManager(db);
+        sessionMgr = new SessionManager(db); // gestor de emparejamiento jugador-jugador
     }
  
     // -------------------------------------------------------------------------
@@ -32,18 +32,18 @@ public class GameServer {
     // -------------------------------------------------------------------------
     public void start() {
         try {
-            serverSocket = new ServerSocket(PORT);
+            serverSocket = new ServerSocket(PORT); // Escuha en puerto 5000
             System.out.println("=== Cyber Defense Duel - Servidor iniciado en puerto " + PORT + " ===");
  
             while (true) {
                 // Bloquea hasta que llega un nuevo cliente
-                Socket clientSocket = serverSocket.accept();
+                Socket clientSocket = serverSocket.accept(); // Acepta conexion entrante
                 System.out.println("[Servidor] Nueva conexion desde: "
                         + clientSocket.getInetAddress().getHostAddress());
  
                 // Cada cliente se atiende en su propio hilo para no bloquear al servidor
                 ClientHandler handler = new ClientHandler(clientSocket, db, sessionMgr);
-                Thread t = new Thread(handler);
+                Thread t = new Thread(handler); // Hilo separado por cliente
                 t.setDaemon(true); // el hilo muere si el servidor se cierra
                 t.start();
             }

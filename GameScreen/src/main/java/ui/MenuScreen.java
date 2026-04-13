@@ -88,8 +88,8 @@ public class MenuScreen {
         stage.setTitle("Cyber Defense Duel — Menú");
         stage.setFullScreen(true);
 
-        initServerHandlers();
-        connection.selectAvatar(selectedAvatar);
+        initServerHandlers(); // Registra callbacks de servidor
+        connection.selectAvatar(selectedAvatar); // Envia avatar al servidor
     }
 
     // ── Panel principal ───────────────────────────────────

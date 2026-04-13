@@ -31,11 +31,11 @@ public class ServerConnection {
 
     public synchronized void connect() throws IOException {
         if (running) return; // Ya estamos conectados
-        socket = new Socket(host, port);
-        // Configuramos los streams con codificación UTF-8
+        socket = new Socket(host, port); // Crea socket TCP
+        // Configuramos los streams con codificacion UTF-8
         in = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
         out = new PrintWriter(socket.getOutputStream(), true, StandardCharsets.UTF_8);
-        running = true;
+        running = true; // Marca como conectado
         startReader(); // Lanza el hilo que escucha mensajes
     }
 
@@ -61,8 +61,8 @@ public class ServerConnection {
     }
 
     public synchronized void send(JsonObject json) {
-        if (!running || out == null) return; // No enviamos si la conexión está caída
-        out.println(json.toString());        // Enviamos el JSON como una línea de texto
+        if (!running || out == null) return; // No enviamos si la conexion esta caida
+        out.println(json.toString()); // Envia el JSON como una linea de texto
     }
 
     // ----------------- Métodos de conveniencia para los distintos tipos de mensaje -----------------

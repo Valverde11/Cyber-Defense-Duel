@@ -17,36 +17,36 @@ public class DatabaseManager {
 
     // Registra un usuario nuevo, retorna false si ya existe
     public boolean register(String username, String password) {
-        if (findUser(username) != null)
-            return false;
-        users[userCount++] = new UserRecord(username, hash(password));
-        save();
+        if (findUser(username) != null) // Verifica si ya existe usuario
+            return false; // Rechazo el registro duplicado
+        users[userCount++] = new UserRecord(username, hash(password)); // Crea nuevo usuario
+        save(); // Persiste en disco
         return true;
     }
 
     // Retorna el UserRecord si las credenciales son correctas, null si no
     public UserRecord login(String username, String password) {
-        UserRecord u = findUser(username);
-        if (u == null)
-            return null;
-        return u.passwordHash.equals(hash(password)) ? u : null;
+        UserRecord u = findUser(username); // Busca usuario por nombre
+        if (u == null) // Usuario no existe
+            return null; 
+        return u.passwordHash.equals(hash(password)) ? u : null; // Valida contraseña
     }
 
     // Guarda el avatar elegido
     public void saveAvatar(String username, String avatar) {
-        UserRecord u = findUser(username);
+        UserRecord u = findUser(username); // Busca usuario
         if (u != null) {
-            u.avatar = avatar;
-            save();
+            u.avatar = avatar; // Actualiza avatar seleccionado
+            save(); // Persiste cambio
         }
     }
 
     // Actualiza el highScore si el nuevo es mayor
     public void updateHighScore(String username, int score) {
-        UserRecord u = findUser(username);
-        if (u != null && score > u.highScore) {
-            u.highScore = score;
-            save();
+        UserRecord u = findUser(username); // Localiza usuario
+        if (u != null && score > u.highScore) { // Verifica si es nuevo record
+            u.highScore = score; // Actualiza record
+            save(); // Persiste en base de datos
         }
     }
 
@@ -73,33 +73,33 @@ public class DatabaseManager {
 
     private void save() {
         try (PrintWriter pw = new PrintWriter(DB_FILE)) {
-            pw.print("[");
+            pw.print("["); // Inicia array JSON
             for (int i = 0; i < userCount; i++) {
-                pw.print(SimpleJson.toJson(users[i]));
+                pw.print(SimpleJson.toJson(users[i])); // Convierte cada usuario a JSON
                 if (i < userCount - 1)
-                    pw.print(",");
+                    pw.print(","); // Separa objetos JSON
             }
-            pw.print("]");
+            pw.print("]"); // Cierra array JSON
         } catch (Exception e) {
             System.err.println("Error guardando base de datos: " + e.getMessage());
         }
     }
 
     public void updateStats(String username, int score, int y, int r, int b) {
-        UserRecord u = findUser(username);
+        UserRecord u = findUser(username); // Localiza usuario
         if (u != null) {
-            u.totalScore += score;
-            u.gamesPlayed += 1;
+            u.totalScore += score; // Suma puntos totales
+            u.gamesPlayed += 1; // Incrementa contador de partidas
 
-            u.xpYellow += y;
+            u.xpYellow += y; // Suma experiencia por tipo de ataque
             u.xpRed += r;
             u.xpBlue += b;
 
-            if (score > u.highScore) {
-                u.highScore = score;
+            if (score > u.highScore) { // Verifica si es nuevo record
+                u.highScore = score; // Actualiza record
             }
 
-            save();
+            save(); // Persiste cambios
         }
     }
 

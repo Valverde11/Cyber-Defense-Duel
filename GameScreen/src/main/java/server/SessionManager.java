@@ -21,15 +21,15 @@ public class SessionManager {
         }
 
         if (waitingPlayer == null) {
-            waitingPlayer = player;
+            waitingPlayer = player; // Primer jugador en cola
             player.send("{\"type\":\"WAITING\",\"message\":\"Esperando oponente...\"}");
             System.out.println("[SessionManager] " + player.getUsername() + " en cola, esperando oponente.");
         } else {
             System.out.println("[SessionManager] Emparejando "
                     + waitingPlayer.getUsername() + " vs " + player.getUsername());
-            GameSession session = new GameSession(waitingPlayer, player, db);
-            waitingPlayer = null;
-            session.start();
+            GameSession session = new GameSession(waitingPlayer, player, db); // Crea sesion 1v1
+            waitingPlayer = null; // Limpia cola
+            session.start(); // Inicia la partida
         }
     }
 

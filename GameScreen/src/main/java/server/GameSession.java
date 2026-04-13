@@ -27,16 +27,16 @@ public class GameSession {
 
         // 1. MATCH_FOUND
         JsonObject matchMsg = new JsonObject();
-        matchMsg.addProperty("type", "MATCH_FOUND");
+        matchMsg.addProperty("type", "MATCH_FOUND"); // Notifica que se encontro oponente
         player1.send(matchMsg.toString());
         player2.send(matchMsg.toString());
 
         // 2. Esperar 3.5 segundos para que el cliente muestre el countdown
-        try { Thread.sleep(3500); } catch (InterruptedException ignored) {}
+        try { Thread.sleep(3500); } catch (InterruptedException ignored) {} // Pausa para animacion
 
         // 3. CONFIG — el cliente arranca el juego al recibirlo
         JsonObject configMsg = new JsonObject();
-        configMsg.addProperty("type",                   "CONFIG");
+        configMsg.addProperty("type",                   "CONFIG"); // Mensaje de configuracion de juego
         configMsg.addProperty("initialHp",              100);
         configMsg.addProperty("baseSpawnRate",           1.0);
         configMsg.addProperty("baseAttackSpeed",         2.0);
@@ -46,22 +46,22 @@ public class GameSession {
         configMsg.addProperty("speedAddPerLevel",        0.3);
 
         JsonObject damageByType = new JsonObject();
-        damageByType.addProperty("DDOS",    4);
+        damageByType.addProperty("DDOS",    4); // Danio por tipo de ataque
         damageByType.addProperty("MALWARE", 8);
         damageByType.addProperty("CRED",    10);
         configMsg.add("damageByType", damageByType);
 
-        player1.send(configMsg.toString());
-        player2.send(configMsg.toString());
+        player1.send(configMsg.toString()); // Envio de configuracion a jugador 1
+        player2.send(configMsg.toString()); // Envio de configuracion a jugador 2
     }
 
     // ── Enviar al oponente ────────────────────────────────
 
     public void sendToOpponent(ClientHandler sender, String message) {
         if (sender == player1 && player2 != null) {
-            player2.send(message);
+            player2.send(message); // Envia mensaje de jugador 1 a jugador 2
         } else if (sender == player2 && player1 != null) {
-            player1.send(message);
+            player1.send(message); // Envia mensaje de jugador 2 a jugador 1
         }
     }
 
@@ -69,16 +69,16 @@ public class GameSession {
 
     public void playerDied(ClientHandler player, int score) {
         if (player == player1) {
-            player1Dead = true;
+            player1Dead = true; // Marca muerte de jugador 1
         } else {
-            player2Dead = true;
+            player2Dead = true; // Marca muerte de jugador 2
         }
 
         if (player.getUsername() != null) {
-            db.updateHighScore(player.getUsername(), score);
+            db.updateHighScore(player.getUsername(), score); // Actualiza record si es mayor
         }
 
-        if (player1Dead && player2Dead) {
+        if (player1Dead && player2Dead) { // Si ambos mueren, termina la partida
             endGame();
         }
     }
