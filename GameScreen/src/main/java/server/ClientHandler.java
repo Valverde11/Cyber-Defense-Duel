@@ -134,9 +134,9 @@ class ClientHandler implements Runnable {
         this.username = user;
         System.out.println("[Servidor] Login exitoso: " + username);
         System.out.println("  Partidas jugadas: " + record.gamesPlayed);
-        System.out.println("  Kills Yellow: " + record.xpYellow);
-        System.out.println("  Kills Red: " + record.xpRed);
-        System.out.println("  Kills Blue: " + record.xpBlue);
+        System.out.println("  Kills DDoS: " + record.xpYellow);
+        System.out.println("  Kills Malware: " + record.xpRed);
+        System.out.println("  Kills Credential Attack: " + record.xpBlue);
  
         // Respuesta exitosa + estadisticas del jugador
         JsonObject resp = new JsonObject();

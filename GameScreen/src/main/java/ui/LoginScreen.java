@@ -1,15 +1,24 @@
 package ui;
 
 import com.google.gson.JsonObject;
+
 import client.ServerConnection;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.Separator;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.text.*;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import persistence.DatabaseManager;
 
@@ -21,7 +30,7 @@ public class LoginScreen {
 
     public LoginScreen(Stage stage) {
         this.stage = stage;
-        this.connection = new ServerConnection("localhost", 5000);
+        this.connection = new ServerConnection("192.168.100.10", 5000);
     }
 
     public LoginScreen(Stage stage, ServerConnection connection) {
