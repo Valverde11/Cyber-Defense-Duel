@@ -32,6 +32,8 @@ public class GameView extends Pane {
     private final ServerConnection connection;
     private final Image playerImage;
     private Image backgroundImage;
+    private boolean playerIsDead = false;
+    private boolean showFinalResult = false;
 
     private final DatabaseManager db;
     private final String username;
@@ -96,24 +98,22 @@ public class GameView extends Pane {
     private void handleServerMessage(JsonObject msg) {
         String type = msg.get("type").getAsString();
         switch (type) {
-            case "OPPONENT_UPDATE":
-                opponentHp    = msg.get("hp").getAsInt();
-                opponentScore = msg.get("score").getAsInt();
-                opponentLevel = msg.get("level").getAsInt();
-                if (msg.has("username"))
-                    opponentUsername = msg.get("username").getAsString();
-                break;
             case "OPPONENT_DEAD":
                 opponentDead = true;
-                break;
-            case "OPPONENT_DISCONNECTED":
-                opponentDisconnected = true;
-                gameEnded = true;
-                playerWon = true;
-                AudioManager.stopMusic();
-                AudioManager.playSound("/sounds/smb_stage_clear.wav");
-                break;
-            default:
+
+                // Si tú ya estás muerto → decidir resultado
+                if (playerIsDead && !showFinalResult) {
+                    showFinalResult = true;
+                    gameEnded = true;
+
+                    int myScore = gameLogic.getScore();
+
+                    if (myScore > opponentScore) {
+                        playerWon = true;
+                    } else if (myScore < opponentScore) {
+                        playerWon = false;
+                    }
+                }
                 break;
         }
     }
@@ -171,10 +171,12 @@ public class GameView extends Pane {
         gameLogic.update((int) w, (int) h);
         pushStateToServer();
 
-        if (gameLogic.isGameOver()) {
-            triggerGameOver();
+        if (gameLogic.isGameOver() && !playerIsDead) {
+            playerIsDead = true;
+
             AudioManager.stopMusic();
             AudioManager.playSound("/sounds/smb_gameover.wav");
+
             if (!deadNotified) {
                 connection.playerDead(
                     gameLogic.getScore(),
@@ -183,6 +185,22 @@ public class GameView extends Pane {
                     gameLogic.getBlueKills());
                 deadNotified = true;
             }
+        }
+        if (playerIsDead && opponentDead && !showFinalResult) {
+            showFinalResult = true;
+            gameEnded = true;
+
+            int myScore = gameLogic.getScore();
+
+            if (myScore > opponentScore) {
+                playerWon = true;
+            } else if (myScore < opponentScore) {
+                playerWon = false;
+            }
+        }
+        if (playerIsDead) {
+            pushStateToServer();
+            return;
         }
     }
 
@@ -376,27 +394,62 @@ public class GameView extends Pane {
     // ── Fin de juego ──────────────────────────────────────────
 
     private void drawEndGame(double w, double h) {
+
         if (opponentDisconnected) {
             gc.setFill(Color.color(0, 0, 0, 0.75));
             gc.fillRect(0, 0, w, h);
+
             gc.setFill(Color.YELLOW);
             gc.setFont(Font.font("Courier New", FontWeight.BOLD, 34));
             drawCentered("Oponente desconectado", w, h / 2 - 20);
+
             gc.setFill(Color.WHITE);
             gc.setFont(Font.font("Courier New", FontWeight.BOLD, 20));
             drawCentered("Sesión terminada", w, h / 2 + 20);
             return;
         }
-        if (opponentDead && !gameEnded) {
-            gc.setFill(Color.web("#00c85a"));
-            gc.setFont(Font.font("Courier New", FontWeight.BOLD, 18));
-            drawCentered("¡Oponente derrotado! Sigue jugando...", w, 100);
-        }
-        if (gameEnded) {
-            gc.setFill(Color.color(0, 0, 0, 0.78));
+
+        if (playerIsDead && !opponentDead) {
+            gc.setFill(Color.color(0, 0, 0, 0.75));
             gc.fillRect(0, 0, w, h);
-            if (playerWon) drawGameWin(w, h);
-            else           drawGameOver(w, h);
+
+            gc.setFill(Color.YELLOW);
+            gc.setFont(Font.font("Courier New", FontWeight.BOLD, 28));
+            drawCentered("Esperando al oponente...", w, h / 2 - 20);
+
+            gc.setFill(Color.WHITE);
+            gc.setFont(Font.font("Courier New", 18));
+            drawCentered("Score: " + gameLogic.getScore(), w, h / 2 + 20);
+            return;
+        }
+
+        if (showFinalResult) {
+            gc.setFill(Color.color(0, 0, 0, 0.85));
+            gc.fillRect(0, 0, w, h);
+
+            int myScore = gameLogic.getScore();
+
+            if (myScore == opponentScore) {
+                gc.setFill(Color.CYAN);
+                gc.setFont(Font.font("Courier New", FontWeight.BOLD, 50));
+                drawCentered("DRAW", w, h / 2 - 40);
+            } else if (playerWon) {
+                gc.setFill(Color.web("#00c85a"));
+                gc.setFont(Font.font("Courier New", FontWeight.BOLD, 50));
+                drawCentered("YOU WIN", w, h / 2 - 40);
+            } else {
+                gc.setFill(Color.web("#ff3c3c"));
+                gc.setFont(Font.font("Courier New", FontWeight.BOLD, 50));
+                drawCentered("YOU LOSE", w, h / 2 - 40);
+            }
+
+            gc.setFill(Color.web("#ffd232"));
+            gc.setFont(Font.font("Courier New", FontWeight.BOLD, 24));
+            drawCentered("Tu Score: " + myScore, w, h / 2 + 20);
+
+            gc.setFill(Color.CORNFLOWERBLUE);
+            gc.setFont(Font.font("Courier New", FontWeight.BOLD, 20));
+            drawCentered("Rival: " + opponentScore, w, h / 2 + 60);
         }
     }
 
